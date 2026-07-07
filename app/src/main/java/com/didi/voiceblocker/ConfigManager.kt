@@ -244,9 +244,12 @@ object ConfigManager {
     fun readLog(): String {
         val ctx = appContext ?: return ""
         val file = java.io.File(ctx.getExternalFilesDir(null), LOG_FILE)
-        return if (file.exists()) {
-            try { file.readText() } catch (_: Exception) { "" }
-        } else { "" }
+        if (!file.exists()) return ""
+        return try {
+            val allLines = file.readLines()
+            val last100 = if (allLines.size > 100) allLines.takeLast(100) else allLines
+            "(共 ${allLines.size} 条，仅显示最后 100 条)\n---\n" + last100.joinToString("\n")
+        } catch (_: Exception) { "" }
     }
 
     // ── Wildcard matching ────────────────────────────────────────
