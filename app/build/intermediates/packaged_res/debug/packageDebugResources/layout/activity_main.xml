@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF121212">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Didi Voice Blocker v1.0"
+            android:textColor="#FFFFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/statusIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="放行中"
+            android:textColor="#FF4CAF50"
+            android:textSize="14sp"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="总开关"
+                android:textColor="#FFFFFFFF"
+                android:textSize="16sp" />
+
+            <Switch
+                android:id="@+id/masterSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/tabWhitelist"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="白名单"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/tabRecords"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="播报记录"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/tabStats"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="系统状态"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/guideCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FF3E2723"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/guideText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFAB91"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnGrantAccess"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="去授权"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/panelWhitelist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FF1E1E1E"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="文本白名单(命中则放行)"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <EditText
+                    android:id="@+id/inputAddText"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:hint="输入文本关键词"
+                    android:textColorHint="#FF888888"
+                    android:textColor="#FFFFFFFF"
+                    android:background="#FF333333"
+                    android:padding="8dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnAddText"
+                    android:layout_width="60dp"
+                    android:layout_height="40dp"
+                    android:text="+"
+                    android:textAllCaps="false"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:layout_marginBottom="4dp">
+                <LinearLayout
+                    android:id="@+id/listTextWhitelistContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FF222222"
+                    android:padding="4dp" />
+            </ScrollView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="长按删除"
+                android:textColor="#FF888888"
+                android:textSize="11sp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="资源ID白名单"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <EditText
+                    android:id="@+id/inputAddResId"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:hint="输入资源ID"
+                    android:textColorHint="#FF888888"
+                    android:textColor="#FFFFFFFF"
+                    android:background="#FF333333"
+                    android:padding="8dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnAddResId"
+                    android:layout_width="60dp"
+                    android:layout_height="40dp"
+                    android:text="+"
+                    android:textAllCaps="false"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:layout_marginBottom="4dp">
+                <LinearLayout
+                    android:id="@+id/listResIdWhitelistContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FF222222"
+                    android:padding="4dp" />
+            </ScrollView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="强制静音关键词(黑名单)"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <EditText
+                    android:id="@+id/inputAddBlock"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:hint="输入强制静音词"
+                    android:textColorHint="#FF888888"
+                    android:textColor="#FFFFFFFF"
+                    android:background="#FF333333"
+                    android:padding="8dp"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:layout_marginEnd="8dp" />
+
+                <Button
+                    android:id="@+id/btnAddBlock"
+                    android:layout_width="60dp"
+                    android:layout_height="40dp"
+                    android:text="+"
+                    android:textAllCaps="false"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginBottom="4dp">
+                <LinearLayout
+                    android:id="@+id/listBlockHintsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="#FF222222"
+                    android:padding="4dp" />
+            </ScrollView>
+
+            <Button
+                android:id="@+id/btnResetDefaults"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="恢复默认配置"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginTop="12dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/panelRecords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FF1E1E1E"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="本次播报记录"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="300dp">
+                <TextView
+                    android:id="@+id/recordsView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FF00FF00"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:background="#FF000000"
+                    android:padding="8dp"
+                    android:text="(暂无记录)" />
+            </ScrollView>
+
+            <Button
+                android:id="@+id/btnClearRecords"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="清空记录"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/panelStats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FF1E1E1E"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/statsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFFFF"
+                android:textSize="13sp"
+                android:padding="8dp" />
+
+            <Button
+                android:id="@+id/btnClearStats"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="清空统计"
+                android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <Button
+                android:id="@+id/btnStartBall"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="启动悬浮球"
+                android:textAllCaps="false"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btnStopBall"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="关闭悬浮球"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="原理: 无障碍服务监听滴滴窗口，前台时静音STREAM_MUSIC，订单/预约页面放行。无需root。"
+            android:textColor="#FF666666"
+            android:textSize="11sp"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+</ScrollView>

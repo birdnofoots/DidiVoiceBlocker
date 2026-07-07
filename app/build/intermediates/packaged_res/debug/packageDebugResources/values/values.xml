@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#FF2196F3</color>
+    <color name="ic_launcher_foreground">#FFFFFFFF</color>
+    <string name="accessibility_desc">监听滴滴车主窗口变化，前台时自动静音安全提醒语音，订单/预约页面放行。</string>
+    <string name="app_name">滴滴静音器</string>
+    <style name="Theme.DidiVoiceBlocker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF2196F3</item>
+        <item name="colorPrimaryVariant">#FF1976D2</item>
+        <item name="colorOnPrimary">#FFFFFFFF</item>
+        <item name="colorSecondary">#FF4CAF50</item>
+        <item name="android:windowBackground">#FF121212</item>
+    </style>
+</resources>
