@@ -16,7 +16,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
+import androidx.appcompat.widget.SwitchCompat
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var statusText: TextView
     private lateinit var statusIndicator: TextView
-    private lateinit var masterSwitch: Switch
+    private lateinit var masterSwitch: androidx.appcompat.widget.SwitchCompat
     private lateinit var tabWhitelist: Button
     private lateinit var tabRecords: Button
     private lateinit var tabStats: Button

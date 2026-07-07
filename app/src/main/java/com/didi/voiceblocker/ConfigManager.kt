@@ -221,32 +221,51 @@ object ConfigManager {
 
     fun appendLog(tag: String, msg: String) {
         val ctx = appContext ?: return
-        val dir = ctx.getExternalFilesDir(null) ?: return
-        val file = java.io.File(dir, LOG_FILE)
         val ts = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
         val line = "[$ts][$tag] $msg\n"
         try {
+            val file = java.io.File(ctx.getExternalFilesDir(null), LOG_FILE)
             file.appendText(line)
         } catch (_: Exception) {}
     }
 
     fun getLogPath(): String {
         val ctx = appContext ?: return "(unknown)"
-        val dir = ctx.getExternalFilesDir(null) ?: return "(no dir)"
-        return java.io.File(dir, LOG_FILE).absolutePath
+        return java.io.File(ctx.getExternalFilesDir(null), LOG_FILE).absolutePath
     }
 
     fun clearLog() {
         val ctx = appContext ?: return
-        val dir = ctx.getExternalFilesDir(null) ?: return
-        val file = java.io.File(dir, LOG_FILE)
-        try { file.delete() } catch (_: Exception) {}
+        try {
+            java.io.File(ctx.getExternalFilesDir(null), LOG_FILE).delete()
+        } catch (_: Exception) {}
     }
 
     fun readLog(): String {
         val ctx = appContext ?: return ""
-        val dir = ctx.getExternalFilesDir(null) ?: return ""
-        val file = java.io.File(dir, LOG_FILE)
-        return try { file.readText() } catch (_: Exception) { "" }
+        val file = java.io.File(ctx.getExternalFilesDir(null), LOG_FILE)
+        return if (file.exists()) {
+            try { file.readText() } catch (_: Exception) { "" }
+        } else { "" }
+    }
+
+    // ── Wildcard matching ────────────────────────────────────────
+    // Supports * (any chars) and ? (any single char)
+    // Falls back to plain contains() if pattern has no wildcards
+    fun matchesWildcard(text: String, pattern: String): Boolean {
+        if (pattern.isEmpty()) return text.isEmpty()
+        if (!pattern.contains('*') && !pattern.contains('?')) {
+            // No wildcards — use fast plain contains
+            return text.contains(pattern, ignoreCase = true)
+        }
+        val regex = pattern
+            .replace(".", "\\.")
+            .replace("*", ".*")
+            .replace("?", ".")
+        return try {
+            Regex("^$regex$", RegexOption.IGNORE_CASE).containsMatchIn(text)
+        } catch (_: Exception) {
+            text.contains(pattern, ignoreCase = true)
+        }
     }
 }

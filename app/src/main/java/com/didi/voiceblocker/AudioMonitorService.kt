@@ -211,11 +211,12 @@ class AudioMonitorService : Service() {
         val duration = endTime - playbackStartTime
 
         state = State.IDLE
-        pendingPageCheck = false
+        // Don't set pendingPageCheck = false here — let page check result (or timeout) handle unmute
         isPlaying = false
-        ConfigManager.appendLog("AMS", "<<< SILENCE duration=$duration ms isMuted=$isMuted")
+        ConfigManager.appendLog("AMS", "<<< SILENCE duration=$duration ms isMuted=$isMuted pendingPageCheck=$pendingPageCheck")
         Log.d(TAG, "Playback ended, duration=$duration ms")
 
+        // Record with current state; page check result will update allowReason
         val reason = if (isMuted) "无" else "待定"
         val record = PlaybackRecord(
             id = playbackIdCounter,
@@ -227,8 +228,12 @@ class AudioMonitorService : Service() {
         )
         ConfigManager.addPlaybackRecord(record)
 
-        ensureUnmuted()
-        isMuted = false
+        // Don't unmute here — page check result (or timeout) will decide
+        // If no page check was pending, unmute now
+        if (!pendingPageCheck) {
+            ensureUnmuted()
+            isMuted = false
+        }
         broadcastState()
     }
 

@@ -79,6 +79,13 @@ class FloatingBallService : Service() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
 
+        // Also start AudioMonitorService if not already running
+        if (ConfigManager.enabled) {
+            val monitorIntent = Intent(this, AudioMonitorService::class.java)
+            startForegroundService(monitorIntent)
+            Log.d(TAG, "Started AudioMonitorService from FloatingBallService")
+        }
+
         val filter = IntentFilter().apply {
             addAction(AudioMonitorService.ACTION_PLAYBACK_STATE_CHANGED)
             addAction(SmartVoiceBlocker.ACTION_MUTE_STATE_CHANGED)

@@ -40,6 +40,14 @@ class SmartVoiceBlocker : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var lastActivityName = ""
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_REQUEST_PAGE_CHECK) {
+            Log.d(TAG, "onStartCommand: received page check request")
+            checkCurrentPageAndNotify()
+        }
+        return START_STICKY
+    }
+
     // Broadcast receiver for page check requests from AudioMonitorService
     private val pageCheckReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -162,6 +170,13 @@ class SmartVoiceBlocker : AccessibilityService() {
 
     private fun checkCurrentPageAndNotify() {
         ConfigManager.appendLog("SVB", ">>> checkCurrentPageAndNotify")
+        // Wait for page transition to settle before scanning
+        handler.postDelayed({
+            performPageScanAndNotify()
+        }, 1000) // 1 second delay to let page transition complete
+    }
+
+    private fun performPageScanAndNotify() {
         val root = try {
             rootInActiveWindow ?: run {
                 Log.w(TAG, "No active window for page check")
@@ -222,7 +237,7 @@ class SmartVoiceBlocker : AccessibilityService() {
 
             // Check blacklist first — any hit means mute
             for (hint in ConfigManager.blockHints) {
-                if (combined.contains(hint, true)) {
+                if (ConfigManager.matchesWildcard(combined, hint)) {
                     foundBlacklist = true
                     return true
                 }
@@ -230,14 +245,14 @@ class SmartVoiceBlocker : AccessibilityService() {
 
             // Check allowTexts (预约单 + 实时单 keywords)
             for (allowed in ConfigManager.allowTexts) {
-                if (combined.contains(allowed, true)) {
+                if (ConfigManager.matchesWildcard(combined, allowed)) {
                     foundWhitelist = true
                 }
             }
 
             // Check allowResourceIds
             for (allowedId in ConfigManager.allowResourceIds) {
-                if (resId.contains(allowedId, true)) {
+                if (ConfigManager.matchesWildcard(resId, allowedId)) {
                     foundWhitelist = true
                 }
             }
