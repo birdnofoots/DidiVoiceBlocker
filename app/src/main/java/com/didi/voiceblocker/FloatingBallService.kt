@@ -116,7 +116,6 @@ class FloatingBallService : Service() {
         }
 
         floatingView = LayoutInflater.from(this).inflate(R.layout.floating_ball, null)
-        val ballIcon = floatingView!!.findViewById<ImageView>(R.id.ball_icon)
         updateBallIcon()
 
         var downX = 0f
@@ -161,7 +160,6 @@ class FloatingBallService : Service() {
     private fun showPopup() {
         popupWindow?.dismiss()
 
-        // Semi-circular menu layout
         val menuItems = listOf(
             Triple("\uD83D\uDD0D 当前: ${getCurrentStatusText()}", "status", {
                 android.widget.Toast.makeText(this,
@@ -184,11 +182,14 @@ class FloatingBallService : Service() {
         val contentView = createSemiCircleMenu(menuItems)
 
         popupWindow = PopupWindow(contentView,
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.MATCH_PARENT, true).apply {
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
             isOutsideTouchable = true
-            elevation = 0f
-            showAtLocation(floatingView, Gravity.CENTER, 0, 0)
+            elevation = 8f
+            // Position popup above the floating ball
+            val ballX = layoutParams?.x ?: 0
+            val ballY = layoutParams?.y ?: 0
+            showAtLocation(floatingView, Gravity.TOP or Gravity.START, ballX, ballY - 20)
         }
     }
 
@@ -203,74 +204,74 @@ class FloatingBallService : Service() {
     }
 
     private fun createSemiCircleMenu(items: List<Triple<String, String, () -> Unit>>): View {
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 16, 32, 32)
-            setBackgroundColor(0xEE1E1E1E.toInt())
-            gravity = Gravity.CENTER_HORIZONTAL
+        val density = resources.displayMetrics.density
+        val popupWidth = (300 * density).toInt()
+        val arcRadius = (160 * density).toInt()
+        val itemHeight = (48 * density).toInt()
+        val itemCount = items.size
+
+        // Total arc height + room for text
+        val contentHeight = (arcRadius + itemHeight * 2)
+
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(0x00000000)
         }
 
-        val density = resources.displayMetrics.density
-        val radius = (180 * density).toInt()  // Semi-circle radius
-        val ballCenterX = layoutParams?.x?.toInt() ?: (metrics.widthPixels / 2)
-        val ballCenterY = layoutParams?.y?.toInt() ?: 200
+        // Clickable overlay to dismiss
+        val overlay = View(this).apply {
+            setBackgroundColor(0x00000000)
+            setOnClickListener { popupWindow?.dismiss() }
+        }
+        root.addView(overlay, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
 
+        // Arc container - items positioned in screen-relative coords
         val arcContainer = FrameLayout(this)
+        val ballX = layoutParams?.x?.toInt() ?: 0
+        val ballY = layoutParams?.y?.toInt() ?: 0
 
         items.forEachIndexed { index, (text, _, action) ->
-            // Calculate position in semi-circle arc
-            val itemCount = items.size
-            val angle = Math.PI * index / (itemCount - 1).coerceAtLeast(1)  // 0 to PI
-            val offsetX = (radius * Math.cos(angle) - radius).toInt()
-            val offsetY = -(radius * Math.sin(angle)).toInt()  // Negative = above
+            // Arrange from left to right in a semi-circle arc
+            // angle goes from 0 (left) to PI (right), center at PI/2 (top)
+            val angle = Math.PI * index / (itemCount - 1).coerceAtLeast(1)
+            val offsetX = (arcRadius * Math.cos(angle) - itemHeight / 2).toInt()
+            val offsetY = -(arcRadius * Math.sin(angle)).toInt()
 
             val tv = TextView(this@FloatingBallService).apply {
                 this.text = text
                 setTextColor(0xFFFFFFFF.toInt())
                 textSize = 14f
-                setPadding((16 * density).toInt(), (12 * density).toInt(),
-                    (16 * density).toInt(), (12 * density).toInt())
+                setPadding((14 * density).toInt(), (10 * density).toInt(),
+                    (14 * density).toInt(), (10 * density).toInt())
                 setOnClickListener { action() }
                 background = android.graphics.drawable.GradientDrawable().apply {
-                    setColor(0xFF333333.toInt())
+                    setColor(0xEE2A2A2A.toInt())
                     cornerRadius = 8 * density
                 }
             }
+
+            val absX = (ballX + ballX / 2 + offsetX).coerceIn(0, metrics.widthPixels - popupWidth)
+            val absY = (ballY - contentHeight + offsetY).coerceIn(0, metrics.heightPixels - itemHeight)
 
             val params = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(
-                    (ballCenterX + offsetX).coerceIn(20, metrics.widthPixels - 200),
-                    (ballCenterY + offsetY - 300).coerceIn(0, metrics.heightPixels - 200),
-                    0, 0
-                )
+                leftMargin = absX
+                topMargin = absY
             }
 
-            val itemWrapper = LinearLayout(this@FloatingBallService).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                addView(tv)
-            }
-
-            arcContainer.addView(itemWrapper, params)
+            arcContainer.addView(tv, params)
         }
 
-        container.addView(arcContainer)
+        root.addView(arcContainer, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
 
-        // Semi-transparent overlay to dismiss
-        val overlay = View(this).apply {
-            setBackgroundColor(0x00000000)
-            setOnClickListener { popupWindow?.dismiss() }
-        }
-        val overlayParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.MATCH_PARENT
-        )
-        container.addView(overlay, 0, overlayParams)
-
-        return container
+        return root
     }
 
 
