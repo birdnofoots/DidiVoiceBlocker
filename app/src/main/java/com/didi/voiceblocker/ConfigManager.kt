@@ -226,6 +226,11 @@ object ConfigManager {
         try {
             val file = java.io.File(ctx.getExternalFilesDir(null), LOG_FILE)
             file.appendText(line)
+            // Trim to last 2000 lines if file gets too large
+            val lines = file.readLines()
+            if (lines.size > 2000) {
+                file.writeText(lines.takeLast(2000).joinToString("\n") + "\n")
+            }
         } catch (_: Exception) {}
     }
 
