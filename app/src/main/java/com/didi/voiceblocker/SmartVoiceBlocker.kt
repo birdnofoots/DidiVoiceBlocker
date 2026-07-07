@@ -137,10 +137,6 @@ class SmartVoiceBlocker : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        if (!ConfigManager.enabled) {
-            ensureUnmuted()
-            return
-        }
 
         val pkg = event.packageName?.toString() ?: return
         if (pkg != DIDI_PKG) return
@@ -161,29 +157,8 @@ class SmartVoiceBlocker : AccessibilityService() {
             }
         }
 
-        val root = try { rootInActiveWindow } catch (e: Exception) { null }
-        if (root == null) return
-
-        try {
-            val texts = mutableListOf<String>()
-            val ids = mutableListOf<String>()
-            val (hasWhitelist, hasBlacklist) = scanWithDetails(root, System.currentTimeMillis(), texts, ids)
-
-            logPageCapture(texts, ids, hasWhitelist, hasBlacklist)
-
-            if (hasBlacklist || !hasWhitelist) {
-                ensureMuted()
-                if (!hasWhitelist && !hasBlacklist) {
-                    handler.post { Toast.makeText(this, "未知页面已静音,可事后在 App 中添加", Toast.LENGTH_SHORT).show() }
-                }
-            } else {
-                ensureUnmuted()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Scan error", e)
-        } finally {
-            root.recycle()
-        }
+        // 只做页面扫描+回报，不做静音决策（静音决策由 AudioMonitorService 根据回报做出）
+        checkCurrentPageAndNotify()
     }
 
     private fun checkCurrentPageAndNotify() {

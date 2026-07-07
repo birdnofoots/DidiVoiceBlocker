@@ -20,6 +20,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -214,10 +215,7 @@ class FloatingBallService : Service() {
         val ballCenterX = layoutParams?.x?.toInt() ?: (metrics.widthPixels / 2)
         val ballCenterY = layoutParams?.y?.toInt() ?: 200
 
-        val arcContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-        }
+        val arcContainer = FrameLayout(this)
 
         items.forEachIndexed { index, (text, _, action) ->
             // Calculate position in semi-circle arc
@@ -239,9 +237,9 @@ class FloatingBallService : Service() {
                 }
             }
 
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+            val params = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 setMargins(
                     (ballCenterX + offsetX).coerceIn(20, metrics.widthPixels - 200),
