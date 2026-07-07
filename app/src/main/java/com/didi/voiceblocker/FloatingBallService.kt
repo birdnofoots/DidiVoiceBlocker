@@ -12,6 +12,8 @@ import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -25,6 +27,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
@@ -38,10 +41,14 @@ class FloatingBallService : Service() {
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
     private var layoutParams: WindowManager.LayoutParams? = null
-    private var popupWindow: PopupWindow? = null
     private var isMuted = false
     private var isPlaying = false
     private lateinit var metrics: DisplayMetrics
+
+    // Sub-menu views managed like DiDiAudioMonitor FloatingButtonService
+    private val subMenuViews = mutableListOf<View>()
+    private var isSubMenuOpen = false
+    private val handler = Handler(Looper.getMainLooper())
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -52,7 +59,6 @@ class FloatingBallService : Service() {
                     updateBallIcon()
                 }
                 SmartVoiceBlocker.ACTION_MUTE_STATE_CHANGED -> {
-                    // Legacy support
                     isMuted = intent.getBooleanExtra(SmartVoiceBlocker.EXTRA_IS_MUTED, false)
                     updateBallIcon()
                 }
@@ -85,10 +91,10 @@ class FloatingBallService : Service() {
 
     override fun onDestroy() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(stateReceiver)
+        closeSubMenu()
         floatingView?.let {
             try { windowManager?.removeView(it) } catch (_: Exception) {}
         }
-        popupWindow?.dismiss()
         super.onDestroy()
         Log.d(TAG, "Floating ball stopped")
     }
@@ -99,9 +105,10 @@ class FloatingBallService : Service() {
         @Suppress("DEPRECATION")
         windowManager?.defaultDisplay?.getMetrics(metrics)
 
-        val size = (50 * resources.displayMetrics.density).toInt()
-        val startX = metrics.widthPixels - size - (20 * resources.displayMetrics.density).toInt()
-        val startY = 200
+        val density = resources.displayMetrics.density
+        val size = (50 * density).toInt()
+        val startX = metrics.widthPixels - size - (20 * density).toInt()
+        val startY = (200 * density).toInt()
 
         layoutParams = WindowManager.LayoutParams(
             size, size,
@@ -144,7 +151,9 @@ class FloatingBallService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) showPopup()
+                    if (!isDragging) {
+                        if (isSubMenuOpen) closeSubMenu() else openSubMenu()
+                    }
                     true
                 }
                 else -> false
@@ -157,40 +166,95 @@ class FloatingBallService : Service() {
         }
     }
 
-    private fun showPopup() {
-        popupWindow?.dismiss()
+    private fun openSubMenu() {
+        if (floatingView == null || isSubMenuOpen) return
+        isSubMenuOpen = true
+
+        val density = resources.displayMetrics.density
+        val radiusPx = (90 * density).toInt()
+        val halfItem = (22 * density).toInt()
+        val itemSize = (44 * density).toInt()
+
+        val densityD = resources.displayMetrics.density
+        val ballSizePx = (50 * densityD).toInt()
+        val centerX = (layoutParams?.x ?: 0) + ballSizePx / 2
+        val centerY = (layoutParams?.y ?: 0) + ballSizePx / 2
+
+        val screenWidth = metrics.widthPixels
+        val isOnLeft = centerX < screenWidth / 2
 
         val menuItems = listOf(
-            Triple("\uD83D\uDD0D 当前: ${getCurrentStatusText()}", "status", {
-                android.widget.Toast.makeText(this,
-                    "状态: ${getCurrentStatusText()}", android.widget.Toast.LENGTH_SHORT).show()
-                popupWindow?.dismiss()
-                Unit
-            }),
-            Triple("\uD83D\uDCCB 白名单管理", "whitelist", { openMainActivity("whitelist"); Unit }),
-            Triple("\uD83D\uDCCA 播报记录", "records", { openMainActivity("records"); Unit }),
-            Triple("⚙️ 总开关: ${if (ConfigManager.enabled) "开" else "关"}", "toggle", {
+            Triple("📋", "白名单管理") { openMainActivity("whitelist") },
+            Triple("📊", "播报记录") { openMainActivity("records") },
+            Triple(if (ConfigManager.enabled) "⏸ 关" else "▶ 开", "总开关") {
                 ConfigManager.enabled = !ConfigManager.enabled
                 ConfigManager.save()
                 updateBallIcon()
-                popupWindow?.dismiss()
-                Unit
-            }),
-            Triple("❌ 关闭悬浮球", "exit", { stopSelf(); Unit })
+                closeSubMenu()
+            },
+            Triple("❌", "关闭悬浮球") { stopSelf() }
         )
 
-        val contentView = createSemiCircleMenu(menuItems)
-
-        popupWindow = PopupWindow(contentView,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
-            isOutsideTouchable = true
-            elevation = 8f
-            // Position popup above the floating ball
-            val ballX = layoutParams?.x ?: 0
-            val ballY = layoutParams?.y ?: 0
-            showAtLocation(floatingView, Gravity.TOP or Gravity.START, ballX, ballY - 20)
+        val count = menuItems.size
+        val startAngle: Float
+        val endAngle: Float
+        if (isOnLeft) {
+            startAngle = -90f
+            endAngle = 90f
+        } else {
+            startAngle = 90f
+            endAngle = 270f
         }
+
+        menuItems.forEachIndexed { index, (emoji, _, action) ->
+            val angleDeg: Float = if (count == 1) {
+                (startAngle + endAngle) / 2f
+            } else {
+                startAngle + (endAngle - startAngle) * index / (count - 1)
+            }
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+
+            val itemX = centerX + (radiusPx * Math.cos(angleRad)).toInt() - halfItem
+            val itemY = centerY + (radiusPx * Math.sin(angleRad)).toInt() - halfItem
+
+            val itemView = TextView(this).apply {
+                text = emoji
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setBackgroundColor(0xEE2A2A2A.toInt())
+                setPadding((6 * density).toInt(), (6 * density).toInt(),
+                    (6 * density).toInt(), (6 * density).toInt())
+                elevation = 16f
+                setOnClickListener { action() }
+            }
+
+            val params = WindowManager.LayoutParams(
+                itemSize, itemSize,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                this.x = itemX
+                this.y = itemY
+            }
+
+            try {
+                windowManager?.addView(itemView, params)
+                subMenuViews.add(itemView)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add submenu item", e)
+            }
+        }
+    }
+
+    private fun closeSubMenu() {
+        isSubMenuOpen = false
+        for (v in subMenuViews) {
+            try { windowManager?.removeView(v) } catch (_: Exception) {}
+        }
+        subMenuViews.clear()
     }
 
     private fun getCurrentStatusText(): String {
@@ -203,81 +267,7 @@ class FloatingBallService : Service() {
         }
     }
 
-    private fun createSemiCircleMenu(items: List<Triple<String, String, () -> Unit>>): View {
-        val density = resources.displayMetrics.density
-        val popupWidth = (300 * density).toInt()
-        val arcRadius = (160 * density).toInt()
-        val itemHeight = (48 * density).toInt()
-        val itemCount = items.size
-
-        // Total arc height + room for text
-        val contentHeight = (arcRadius + itemHeight * 2)
-
-        val root = FrameLayout(this).apply {
-            setBackgroundColor(0x00000000)
-        }
-
-        // Clickable overlay to dismiss
-        val overlay = View(this).apply {
-            setBackgroundColor(0x00000000)
-            setOnClickListener { popupWindow?.dismiss() }
-        }
-        root.addView(overlay, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
-
-        // Arc container - items positioned in screen-relative coords
-        val arcContainer = FrameLayout(this)
-        val ballX = layoutParams?.x?.toInt() ?: 0
-        val ballY = layoutParams?.y?.toInt() ?: 0
-
-        items.forEachIndexed { index, (text, _, action) ->
-            // Arrange from left to right in a semi-circle arc
-            // angle goes from 0 (left) to PI (right), center at PI/2 (top)
-            val angle = Math.PI * index / (itemCount - 1).coerceAtLeast(1)
-            val offsetX = (arcRadius * Math.cos(angle) - itemHeight / 2).toInt()
-            val offsetY = -(arcRadius * Math.sin(angle)).toInt()
-
-            val tv = TextView(this@FloatingBallService).apply {
-                this.text = text
-                setTextColor(0xFFFFFFFF.toInt())
-                textSize = 14f
-                setPadding((14 * density).toInt(), (10 * density).toInt(),
-                    (14 * density).toInt(), (10 * density).toInt())
-                setOnClickListener { action() }
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    setColor(0xEE2A2A2A.toInt())
-                    cornerRadius = 8 * density
-                }
-            }
-
-            val absX = (ballX + ballX / 2 + offsetX).coerceIn(0, metrics.widthPixels - popupWidth)
-            val absY = (ballY - contentHeight + offsetY).coerceIn(0, metrics.heightPixels - itemHeight)
-
-            val params = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                leftMargin = absX
-                topMargin = absY
-            }
-
-            arcContainer.addView(tv, params)
-        }
-
-        root.addView(arcContainer, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
-
-        return root
-    }
-
-
-
     private fun openMainActivity(mode: String) {
-        popupWindow?.dismiss()
         val intent = Intent(this, MainActivity::class.java).apply {
             putExtra("mode", mode)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -291,12 +281,7 @@ class FloatingBallService : Service() {
             icon.setBackgroundColor(0xFFF44336.toInt())
             icon.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
         } else if (isPlaying) {
-            // Playing state - blue with appropriate icon
-            if (isMuted) {
-                icon.setBackgroundColor(0xFFFF9800.toInt())  // Orange = playing but muted
-            } else {
-                icon.setBackgroundColor(0xFF2196F3.toInt())  // Blue = playing
-            }
+            icon.setBackgroundColor(if (isMuted) 0xFFFF9800.toInt() else 0xFF2196F3.toInt())
             icon.setImageResource(android.R.drawable.ic_lock_silent_mode_off)
         } else if (isMuted) {
             icon.setBackgroundColor(0xFF9E9E9E.toInt())
