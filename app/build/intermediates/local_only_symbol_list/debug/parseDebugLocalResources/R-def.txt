@@ -13,6 +13,7 @@ id btnGrantAccess
 id btnResetDefaults
 id btnStartBall
 id btnStopBall
+id btnViewLog
 id guideCard
 id guideText
 id inputAddBlock

@@ -18,6 +18,7 @@ object ConfigManager {
     private const val KEY_PLAYBACK_RECORDS = "playback_records"
 
     private var prefs: SharedPreferences? = null
+    private var appContext: Context? = null
 
     var enabled: Boolean = true
     var allowTexts: MutableSet<String> = mutableSetOf()
@@ -61,6 +62,7 @@ object ConfigManager {
     )
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         reload()
     }
@@ -212,5 +214,39 @@ object ConfigManager {
     fun clearPlaybackRecords() {
         playbackRecords.clear()
         save()
+    }
+
+    // ── Debug log ───────────────────────────────────────────────
+    private const val LOG_FILE = "debug.log"
+
+    fun appendLog(tag: String, msg: String) {
+        val ctx = appContext ?: return
+        val dir = ctx.getExternalFilesDir(null) ?: return
+        val file = java.io.File(dir, LOG_FILE)
+        val ts = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
+        val line = "[$ts][$tag] $msg\n"
+        try {
+            file.appendText(line)
+        } catch (_: Exception) {}
+    }
+
+    fun getLogPath(): String {
+        val ctx = appContext ?: return "(unknown)"
+        val dir = ctx.getExternalFilesDir(null) ?: return "(no dir)"
+        return java.io.File(dir, LOG_FILE).absolutePath
+    }
+
+    fun clearLog() {
+        val ctx = appContext ?: return
+        val dir = ctx.getExternalFilesDir(null) ?: return
+        val file = java.io.File(dir, LOG_FILE)
+        try { file.delete() } catch (_: Exception) {}
+    }
+
+    fun readLog(): String {
+        val ctx = appContext ?: return ""
+        val dir = ctx.getExternalFilesDir(null) ?: return ""
+        val file = java.io.File(dir, LOG_FILE)
+        return try { file.readText() } catch (_: Exception) { "" }
     }
 }

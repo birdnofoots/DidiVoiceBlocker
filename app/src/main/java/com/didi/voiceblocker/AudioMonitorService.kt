@@ -52,6 +52,11 @@ class AudioMonitorService : Service() {
     }
 
     private fun handlePlaybackConfigs(configs: List<AudioPlaybackConfiguration>) {
+        ConfigManager.init(this)
+
+        val usageSet = configs.map { it.audioAttributes.usage }.distinct()
+        ConfigManager.appendLog("AMS", "callback: ${configs.size} configs, usages=$usageSet")
+
         // Filter for relevant audio channels (media, voice communication, alarm)
         val relevantConfigs = configs.filter { config ->
             val usage = config.audioAttributes.usage
@@ -61,6 +66,7 @@ class AudioMonitorService : Service() {
         }
 
         if (relevantConfigs.isEmpty()) {
+            ConfigManager.appendLog("AMS", "no relevant configs, relevantUsages=${usageSet}")
             if (state == State.PLAYING) {
                 checkForSilence()
             }
@@ -69,6 +75,7 @@ class AudioMonitorService : Service() {
 
         // We have active audio - this counts as "position changing" activity
         lastActivityTime = System.currentTimeMillis()
+        ConfigManager.appendLog("AMS", "relevant=${relevantConfigs.size}, state=$state")
 
         if (state == State.IDLE) {
             startPlayback()
@@ -183,6 +190,7 @@ class AudioMonitorService : Service() {
         playbackIdCounter++
 
         Log.d(TAG, "Playback started #$playbackIdCounter")
+        ConfigManager.appendLog("AMS", ">>> START_PLAYBACK #$playbackIdCounter")
 
         // IMMEDIATELY mute — prevent audio leak during page scan
         ensureMuted()
@@ -205,6 +213,7 @@ class AudioMonitorService : Service() {
         state = State.IDLE
         pendingPageCheck = false
         isPlaying = false
+        ConfigManager.appendLog("AMS", "<<< SILENCE duration=$duration ms isMuted=$isMuted")
         Log.d(TAG, "Playback ended, duration=$duration ms")
 
         val reason = if (isMuted) "无" else "待定"
@@ -227,6 +236,7 @@ class AudioMonitorService : Service() {
         if (state != State.PLAYING || !pendingPageCheck) return
 
         pendingPageCheck = false
+        ConfigManager.appendLog("AMS", "=== PAGE_RESULT: allowsAudio=$pageAllowsAudio ===")
 
         if (pageAllowsAudio) {
             ensureUnmuted()
@@ -287,11 +297,12 @@ class AudioMonitorService : Service() {
     private fun ensureMuted() {
         if (!isMuted) {
             try {
-                // Use setStreamMute instead of setStreamVolume to avoid locking volume
                 audioManager?.setStreamMute(AudioManager.STREAM_MUSIC, true)
                 isMuted = true
+                ConfigManager.appendLog("AMS", "### MUTED ###")
                 Log.d(TAG, "MUTED")
             } catch (e: Exception) {
+                ConfigManager.appendLog("AMS", "### MUTE_FAILED: ${e.message} ###")
                 Log.e(TAG, "Mute failed", e)
             }
         }
@@ -302,8 +313,10 @@ class AudioMonitorService : Service() {
             try {
                 audioManager?.setStreamMute(AudioManager.STREAM_MUSIC, false)
                 isMuted = false
+                ConfigManager.appendLog("AMS", "### UNMUTED ###")
                 Log.d(TAG, "UNMUTED")
             } catch (e: Exception) {
+                ConfigManager.appendLog("AMS", "### UNMUTE_FAILED: ${e.message} ###")
                 Log.e(TAG, "Unmute failed", e)
             }
         }

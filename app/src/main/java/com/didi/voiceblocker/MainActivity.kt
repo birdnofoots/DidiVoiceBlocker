@@ -255,6 +255,17 @@ class MainActivity : AppCompatActivity() {
             ConfigManager.clearStats()
             refreshStats()
         }
+        findViewById<Button>(R.id.btnViewLog).setOnClickListener {
+            val log = ConfigManager.readLog()
+            val statsView = findViewById<TextView>(R.id.statsText)
+            if (log.isEmpty()) {
+                statsView.text = "(日志为空)"
+            } else {
+                statsView.text = log
+                statsView.post { (statsView.parent as? ScrollView)?.scrollTo(0, statsView.height) }
+            }
+            Toast.makeText(this, "日志路径: ${ConfigManager.getLogPath()}", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun refreshStats() {

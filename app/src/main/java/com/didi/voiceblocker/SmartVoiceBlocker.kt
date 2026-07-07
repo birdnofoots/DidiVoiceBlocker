@@ -161,14 +161,17 @@ class SmartVoiceBlocker : AccessibilityService() {
     }
 
     private fun checkCurrentPageAndNotify() {
+        ConfigManager.appendLog("SVB", ">>> checkCurrentPageAndNotify")
         val root = try {
             rootInActiveWindow ?: run {
                 Log.w(TAG, "No active window for page check")
+                ConfigManager.appendLog("SVB", "no root window")
                 notifyPageResult(false)
                 return
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get root window", e)
+            ConfigManager.appendLog("SVB", "exception: ${e.message}")
             notifyPageResult(false)
             return
         }
@@ -176,9 +179,11 @@ class SmartVoiceBlocker : AccessibilityService() {
         try {
             val allowsAudio = scanForAllowConditions(root)
             Log.d(TAG, "Page check result: allowsAudio=$allowsAudio")
+            ConfigManager.appendLog("SVB", "allowsAudio=$allowsAudio")
             notifyPageResult(allowsAudio)
         } catch (e: Exception) {
             Log.e(TAG, "Page check failed", e)
+            ConfigManager.appendLog("SVB", "scan error: ${e.message}")
             notifyPageResult(false)
         } finally {
             root.recycle()

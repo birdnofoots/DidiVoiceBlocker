@@ -3185,6 +3185,7 @@ id btnGrantAccess
 id btnResetDefaults
 id btnStartBall
 id btnStopBall
+id btnViewLog
 id buttonPanel
 id cache_measures
 id callMeasure
