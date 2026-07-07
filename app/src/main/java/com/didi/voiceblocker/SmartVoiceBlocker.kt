@@ -157,8 +157,7 @@ class SmartVoiceBlocker : AccessibilityService() {
             }
         }
 
-        // 只做页面扫描+回报，不做静音决策（静音决策由 AudioMonitorService 根据回报做出）
-        checkCurrentPageAndNotify()
+        // 不在这里触发扫描——扫描只在 AudioMonitorService 发来 ACTION_REQUEST_PAGE_CHECK 时由 pageCheckReceiver 触发
     }
 
     private fun checkCurrentPageAndNotify() {
