@@ -348,13 +348,20 @@
             android:layout_marginBottom="12dp"
             android:visibility="gone">
 
-            <TextView
-                android:id="@+id/statsText"
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="#FFFFFFFF"
-                android:textSize="13sp"
-                android:padding="8dp" />
+                android:layout_height="300dp">
+                <TextView
+                    android:id="@+id/statsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="13sp"
+                    android:fontFamily="monospace"
+                    android:background="#FF000000"
+                    android:padding="8dp"
+                    android:text="(暂无记录)" />
+            </ScrollView>
 
             <Button
                 android:id="@+id/btnClearStats"

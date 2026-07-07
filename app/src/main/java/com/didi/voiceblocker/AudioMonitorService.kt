@@ -184,6 +184,10 @@ class AudioMonitorService : Service() {
 
         Log.d(TAG, "Playback started #$playbackIdCounter")
 
+        // IMMEDIATELY mute — prevent audio leak during page scan
+        ensureMuted()
+        isMuted = true
+
         // Pull DiDi to foreground for page check
         pendingPageCheck = true
         pageCheckStartTime = System.currentTimeMillis()
@@ -227,7 +231,7 @@ class AudioMonitorService : Service() {
         if (pageAllowsAudio) {
             ensureUnmuted()
             isMuted = false
-            Log.d(TAG, "Page allows audio - keeping unmuted")
+            Log.d(TAG, "Page allows audio - unmuted")
         } else {
             ensureMuted()
             isMuted = true

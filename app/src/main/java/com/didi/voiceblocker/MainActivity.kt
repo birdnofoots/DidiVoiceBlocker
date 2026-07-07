@@ -226,16 +226,27 @@ class MainActivity : AppCompatActivity() {
             recordsView.text = "(暂无记录)"
             return
         }
-        val sdf = SimpleDateFormat("HH:mm:ss", Locale.US)
+        val timeSdf = SimpleDateFormat("HH:mm:ss", Locale.US)
         val sb = StringBuilder()
         for (r in records) {
-            sb.appendLine("[$r.id] ${sdf.format(Date(r.startTime))} - ${sdf.format(Date(r.endTime))}")
-            sb.appendLine("    时长: ${r.duration}ms | ${if (r.wasMuted) "🔇 静音" else "🔊 放行"}")
-            sb.appendLine("    原因: ${r.allowReason}")
+            val startStr = timeSdf.format(Date(r.startTime))
+            val endStr = timeSdf.format(Date(r.endTime))
+            val durationMs = r.duration
+            val durationSec = if (durationMs >= 1000) {
+                String.format(Locale.US, "%.3f秒 (%dms)", durationMs / 1000.0, durationMs)
+            } else {
+                "${durationMs}ms"
+            }
+            val status = if (r.wasMuted) "🔇 静音" else "🔊 放行"
+            sb.appendLine("[$startStr] ▶ 播报开始 @ ${r.startTime}ms")
+            sb.appendLine("[$endStr] ■ 播报结束 @ ${r.endTime}ms | 持续 $durationSec | $status")
+            if (r.allowReason.isNotEmpty() && r.allowReason != "待定") {
+                sb.appendLine("    原因: ${r.allowReason}")
+            }
             sb.appendLine()
         }
         recordsView.text = sb.toString()
-        recordsView.post { (recordsView.parent as? ScrollView)?.scrollTo(0, 0) }
+        recordsView.post { (recordsView.parent as? ScrollView)?.scrollTo(0, recordsView.height) }
     }
 
     private fun setupStatsPanel() {

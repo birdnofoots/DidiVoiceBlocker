@@ -198,28 +198,43 @@ class SmartVoiceBlocker : AccessibilityService() {
     }
 
     /**
-     * Scan for the three allow conditions:
-     * 1. 预约单 page: "预约单", "专车舒适", "不抢"
-     * 2. 实时单 page (pickup phase): "实时单", "接乘客"
-     * 3. Notification simultaneous arrival (handled by AudioMonitorService)
+     * Scan for all allow conditions (three lists):
+     * 1. 预约单 page: "预约单", "专车舒适", "不抢" (allowTexts)
+     * 2. 实时单 page (pickup phase): "实时单", "接乘客" (allowTexts)
+     * 3. Resource IDs in allowResourceIds list
+     * 4. 黑名单 blockHints → returns false immediately (mute)
+     * 5. Notification simultaneous arrival (handled by AudioMonitorService)
      */
     private fun scanForAllowConditions(node: AccessibilityNodeInfo): Boolean {
-        var foundReservation = false
-        var foundRealtime = false
+        var foundBlacklist = false
+        var foundWhitelist = false
 
         fun recurse(n: AccessibilityNodeInfo): Boolean {
             val text = n.text?.toString() ?: ""
             val desc = n.contentDescription?.toString() ?: ""
+            val resId = n.viewIdResourceName ?: ""
             val combined = "$text $desc"
 
-            // Check 预约单 keywords
-            if (combined.contains("预约单") || combined.contains("专车舒适") || combined.contains("不抢")) {
-                foundReservation = true
+            // Check blacklist first — any hit means mute
+            for (hint in ConfigManager.blockHints) {
+                if (combined.contains(hint, true)) {
+                    foundBlacklist = true
+                    return true
+                }
             }
 
-            // Check 实时单 keywords
-            if (combined.contains("实时单") || combined.contains("接乘客")) {
-                foundRealtime = true
+            // Check allowTexts (预约单 + 实时单 keywords)
+            for (allowed in ConfigManager.allowTexts) {
+                if (combined.contains(allowed, true)) {
+                    foundWhitelist = true
+                }
+            }
+
+            // Check allowResourceIds
+            for (allowedId in ConfigManager.allowResourceIds) {
+                if (resId.contains(allowedId, true)) {
+                    foundWhitelist = true
+                }
             }
 
             for (i in 0 until n.childCount) {
@@ -237,9 +252,9 @@ class SmartVoiceBlocker : AccessibilityService() {
 
         recurse(node)
 
-        // Either condition is sufficient for allowing audio
-        val allows = foundReservation || foundRealtime
-        Log.d(TAG, "scanForAllowConditions: reservation=$foundReservation, realtime=$foundRealtime, allows=$allows")
+        // Blacklist hit → mute; whitelist hit → allow; neither → mute (default safe)
+        val allows = !foundBlacklist && foundWhitelist
+        Log.d(TAG, "scanForAllowConditions: blacklist=$foundBlacklist, whitelist=$foundWhitelist, allows=$allows")
         return allows
     }
 
