@@ -33,7 +33,6 @@ class AudioMonitorService : Service() {
     private var lastActivityTime = 0L
     private var positionStableStartTime = 0L
     private var playbackIdCounter = 0
-    private var savedVolume = -1  // -1 = not saved
 
     // Detection state
     private enum class State { IDLE, PLAYING }
@@ -288,14 +287,10 @@ class AudioMonitorService : Service() {
     private fun ensureMuted() {
         if (!isMuted) {
             try {
-                // Save current volume before muting
-                if (savedVolume < 0) {
-                    savedVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
-                }
-                // Set volume to 0 (not ADJUST_MUTE, to avoid global mute)
-                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+                // Use setStreamMute instead of setStreamVolume to avoid locking volume
+                audioManager?.setStreamMute(AudioManager.STREAM_MUSIC, true)
                 isMuted = true
-                Log.d(TAG, "MUTED (savedVolume=$savedVolume)")
+                Log.d(TAG, "MUTED")
             } catch (e: Exception) {
                 Log.e(TAG, "Mute failed", e)
             }
@@ -305,12 +300,9 @@ class AudioMonitorService : Service() {
     private fun ensureUnmuted() {
         if (isMuted) {
             try {
-                // Restore saved volume
-                val volToRestore = if (savedVolume > 0) savedVolume else 1
-                audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, volToRestore, 0)
-                savedVolume = -1
+                audioManager?.setStreamMute(AudioManager.STREAM_MUSIC, false)
                 isMuted = false
-                Log.d(TAG, "UNMUTED (restored volume=$volToRestore)")
+                Log.d(TAG, "UNMUTED")
             } catch (e: Exception) {
                 Log.e(TAG, "Unmute failed", e)
             }
