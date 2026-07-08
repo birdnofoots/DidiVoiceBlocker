@@ -36,9 +36,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tabWhitelist: Button
     private lateinit var tabRecords: Button
     private lateinit var tabStats: Button
+    private lateinit var tabParams: Button
     private lateinit var panelWhitelist: LinearLayout
     private lateinit var panelRecords: LinearLayout
     private lateinit var panelStats: LinearLayout
+    private lateinit var panelParams: LinearLayout
 
     private var currentTab = 0
     private val handler = Handler(Looper.getMainLooper())
@@ -64,9 +66,11 @@ class MainActivity : AppCompatActivity() {
         tabWhitelist = findViewById(R.id.tabWhitelist)
         tabRecords = findViewById(R.id.tabRecords)
         tabStats = findViewById(R.id.tabStats)
+        tabParams = findViewById(R.id.tabParams)
         panelWhitelist = findViewById(R.id.panelWhitelist)
         panelRecords = findViewById(R.id.panelRecords)
         panelStats = findViewById(R.id.panelStats)
+        panelParams = findViewById(R.id.panelParams)
 
         masterSwitch.isChecked = ConfigManager.enabled
         masterSwitch.setOnCheckedChangeListener { _, checked ->
@@ -78,10 +82,12 @@ class MainActivity : AppCompatActivity() {
         tabWhitelist.setOnClickListener { switchTab(0) }
         tabRecords.setOnClickListener { switchTab(1) }
         tabStats.setOnClickListener { switchTab(2) }
+        tabParams.setOnClickListener { switchTab(3) }
 
         setupWhitelistPanel()
         setupRecordsPanel()
         setupStatsPanel()
+        setupParamsPanel()
 
         findViewById<Button>(R.id.btnStartBall).setOnClickListener {
             if (Settings.canDrawOverlays(this)) {
@@ -119,8 +125,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun switchTab(index: Int) {
         currentTab = index
-        val tabs = listOf(tabWhitelist, tabRecords, tabStats)
-        val panels = listOf(panelWhitelist, panelRecords, panelStats)
+        val tabs = listOf(tabWhitelist, tabRecords, tabStats, tabParams)
+        val panels = listOf(panelWhitelist, panelRecords, panelStats, panelParams)
         tabs.forEachIndexed { i, btn ->
             btn.setBackgroundColor(if (i == index) 0xFF2196F3.toInt() else 0xFF333333.toInt())
         }
@@ -266,6 +272,79 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(this, "日志路径: ${ConfigManager.getLogPath()}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun setupParamsPanel() {
+        val root = panelParams
+        root.removeAllViews()
+
+        fun addLabel(text: String) {
+            root.addView(TextView(this).apply {
+                this.text = text
+                setTextColor(0xFF888888.toInt())
+                textSize = 12f
+                setPadding(0, 16, 0, 4)
+            })
+        }
+
+        fun addRow(label: String, valueMs: Long, unit: String): EditText {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 4, 0, 4) }
+            }
+            row.addView(TextView(this).apply {
+                this.text = label
+                setTextColor(0xFFFFFFFF.toInt())
+                textSize = 14f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            val et = EditText(this).apply {
+                setText((valueMs / 1000).toString())
+                setTextColor(0xFFFFFFFF.toInt())
+                setHintTextColor(0xFF666666.toInt())
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                layoutParams = LinearLayout.LayoutParams(120, LinearLayout.LayoutParams.WRAP_CONTENT)
+            }
+            row.addView(et)
+            row.addView(TextView(this).apply {
+                this.text = " $unit"
+                setTextColor(0xFF888888.toInt())
+                textSize = 12f
+            })
+            root.addView(row)
+            return et
+        }
+
+        addLabel("=== 音频检测 ===")
+        val etSilence = addRow("静音判定阈值", ConfigManager.silenceThresholdMs, "秒")
+        val etInterval = addRow("轮询间隔", ConfigManager.positionCheckIntervalMs, "秒")
+        val etMaxDur = addRow("最大播报时长", ConfigManager.maxPlaybackDurationMs, "秒")
+        addLabel("=== 页面检测 ===")
+        val etScanTimeout = addRow("扫描超时", ConfigManager.scanTimeoutMs, "秒")
+        val etDebounce = addRow("防抖延迟", ConfigManager.debounceMs, "秒")
+        val etPageDelay = addRow("扫描延迟", ConfigManager.pageScanDelayMs, "秒")
+
+        root.addView(Button(this).apply {
+            text = "保存参数（热更新）"
+            setOnClickListener {
+                ConfigManager.saveAudioParams(
+                    silenceThreshold = (etSilence.text.toString().toLongOrNull() ?: 3) * 1000,
+                    positionCheckInterval = (etInterval.text.toString().toLongOrNull() ?: 1) * 1000,
+                    maxPlaybackDuration = (etMaxDur.text.toString().toLongOrNull() ?: 30) * 1000,
+                    scanTimeout = (etScanTimeout.text.toString().toLongOrNull() ?: 5) * 1000,
+                    debounce = (etDebounce.text.toString().toLongOrNull() ?: 0) * 1000,
+                    pageScanDelay = (etPageDelay.text.toString().toLongOrNull() ?: 0) * 1000
+                )
+                Toast.makeText(this@MainActivity, "参数已保存并热更新", Toast.LENGTH_SHORT).show()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 16, 0, 0) }
+        })
     }
 
     private fun refreshStats() {

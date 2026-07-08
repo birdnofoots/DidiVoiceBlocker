@@ -27,8 +27,8 @@ class SmartVoiceBlocker : AccessibilityService() {
         const val ACTION_REQUEST_PAGE_CHECK = "com.didi.voiceblocker.REQUEST_PAGE_CHECK"
         const val EXTRA_IS_MUTED = "is_muted"
         private const val DIDI_PKG = "com.sdu.didi.gsui"
-        private const val SCAN_TIMEOUT_MS = 5000L
-        private const val DEBOUNCE_MS = 200L
+        private val SCAN_TIMEOUT_MS: Long get() = ConfigManager.scanTimeoutMs
+        private val DEBOUNCE_MS: Long get() = ConfigManager.debounceMs
         var instance: SmartVoiceBlocker? = null
             private set
     }
@@ -170,35 +170,31 @@ class SmartVoiceBlocker : AccessibilityService() {
 
     private fun checkCurrentPageAndNotify() {
         ConfigManager.appendLog("SVB", ">>> checkCurrentPageAndNotify")
-        // Wait for page transition to settle before scanning
         handler.postDelayed({
+            val start = System.currentTimeMillis()
             performPageScanAndNotify()
-        }, 1000) // 1 second delay to let page transition complete
+            ConfigManager.appendLog("SVB", "page_check_total=${System.currentTimeMillis()-start}ms")
+        }, ConfigManager.pageScanDelayMs)
     }
 
     private fun performPageScanAndNotify() {
         val root = try {
             rootInActiveWindow ?: run {
-                Log.w(TAG, "No active window for page check")
-                ConfigManager.appendLog("SVB", "no root window")
+                ConfigManager.appendLog("SVB", "no_root_window")
                 notifyPageResult(false)
                 return
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to get root window", e)
-            ConfigManager.appendLog("SVB", "exception: ${e.message}")
+            ConfigManager.appendLog("SVB", "root_exception: ${e.message}")
             notifyPageResult(false)
             return
         }
-
         try {
             val allowsAudio = scanForAllowConditions(root)
-            Log.d(TAG, "Page check result: allowsAudio=$allowsAudio")
             ConfigManager.appendLog("SVB", "allowsAudio=$allowsAudio")
             notifyPageResult(allowsAudio)
         } catch (e: Exception) {
-            Log.e(TAG, "Page check failed", e)
-            ConfigManager.appendLog("SVB", "scan error: ${e.message}")
+            ConfigManager.appendLog("SVB", "scan_error: ${e.message}")
             notifyPageResult(false)
         } finally {
             root.recycle()
@@ -229,28 +225,24 @@ class SmartVoiceBlocker : AccessibilityService() {
         var foundBlacklist = false
         var foundWhitelist = false
 
-        fun recurse(n: AccessibilityNodeInfo): Boolean {
+        fun recurse(n: AccessibilityNodeInfo) {
             val text = n.text?.toString() ?: ""
             val desc = n.contentDescription?.toString() ?: ""
             val resId = n.viewIdResourceName ?: ""
             val combined = "$text $desc"
 
-            // Check blacklist first — any hit means mute
             for (hint in ConfigManager.blockHints) {
                 if (ConfigManager.matchesWildcard(combined, hint)) {
                     foundBlacklist = true
-                    return true
                 }
             }
 
-            // Check allowTexts (预约单 + 实时单 keywords)
             for (allowed in ConfigManager.allowTexts) {
                 if (ConfigManager.matchesWildcard(combined, allowed)) {
                     foundWhitelist = true
                 }
             }
 
-            // Check allowResourceIds
             for (allowedId in ConfigManager.allowResourceIds) {
                 if (ConfigManager.matchesWildcard(resId, allowedId)) {
                     foundWhitelist = true
@@ -260,19 +252,12 @@ class SmartVoiceBlocker : AccessibilityService() {
             for (i in 0 until n.childCount) {
                 val child = try { n.getChild(i) } catch (e: Exception) { null }
                 if (child != null) {
-                    try {
-                        if (recurse(child)) return true
-                    } finally {
-                        child.recycle()
-                    }
+                    try { recurse(child) } finally { child.recycle() }
                 }
             }
-            return false
         }
 
         recurse(node)
-
-        // Blacklist hit → mute; whitelist hit → allow; neither → mute (default safe)
         val allows = !foundBlacklist && foundWhitelist
         Log.d(TAG, "scanForAllowConditions: blacklist=$foundBlacklist, whitelist=$foundWhitelist, allows=$allows")
         return allows

@@ -3,6 +3,7 @@ local
 color ic_launcher_background
 color ic_launcher_foreground
 drawable ball_background
+drawable submenu_item_bg
 id ball_icon
 id btnAddBlock
 id btnAddResId
@@ -36,6 +37,9 @@ id tabWhitelist
 layout activity_main
 layout floating_ball
 mipmap ic_launcher
+mipmap ic_launcher_background
+mipmap ic_launcher_foreground
+mipmap ic_launcher_monochrome
 string accessibility_desc
 string app_name
 style Theme.DidiVoiceBlocker

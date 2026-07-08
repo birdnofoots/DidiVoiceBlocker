@@ -19,9 +19,9 @@ class AudioMonitorService : Service() {
         const val ACTION_CHECK_PAGE_RESULT = "com.didi.voiceblocker.CHECK_PAGE_RESULT"
         const val EXTRA_PAGE_ALLOWS_AUDIO = "page_allows_audio"
 
-        private const val POSITION_CHECK_INTERVAL_MS = 500L
-        private const val SILENCE_THRESHOLD_MS = 1000L
-        private const val MAX_PLAYBACK_DURATION_MS = 30000L
+        private val POSITION_CHECK_INTERVAL_MS: Long get() = ConfigManager.positionCheckIntervalMs
+        private val SILENCE_THRESHOLD_MS: Long get() = ConfigManager.silenceThresholdMs
+        private val MAX_PLAYBACK_DURATION_MS: Long get() = ConfigManager.maxPlaybackDurationMs
     }
 
     private var audioManager: AudioManager? = null
@@ -32,6 +32,7 @@ class AudioMonitorService : Service() {
     private var playbackStartTime = 0L
     private var lastActivityTime = 0L
     private var positionStableStartTime = 0L
+    private var audioTriggerTime = 0L
     private var playbackIdCounter = 0
 
     // Detection state
@@ -104,7 +105,7 @@ class AudioMonitorService : Service() {
 
     private val positionCheckRunnable = object : Runnable {
         override fun run() {
-            if (state == State.PLAYING) {
+            if (this@AudioMonitorService.state == State.PLAYING) {
                 // Check if position has been stable (no activity for a while)
                 val timeSinceLastActivity = System.currentTimeMillis() - lastActivityTime
 
@@ -192,6 +193,8 @@ class AudioMonitorService : Service() {
         Log.d(TAG, "Playback started #$playbackIdCounter")
         ConfigManager.appendLog("AMS", ">>> START_PLAYBACK #$playbackIdCounter")
 
+        audioTriggerTime = System.currentTimeMillis()
+
         // IMMEDIATELY mute — prevent audio leak during page scan
         ensureMuted()
         isMuted = true
@@ -238,10 +241,12 @@ class AudioMonitorService : Service() {
     }
 
     private fun handlePageCheckResult(pageAllowsAudio: Boolean) {
-        if (state != State.PLAYING || !pendingPageCheck) return
+        if (!pendingPageCheck) return
 
         pendingPageCheck = false
-        ConfigManager.appendLog("AMS", "=== PAGE_RESULT: allowsAudio=$pageAllowsAudio ===")
+        val elapsed = if (audioTriggerTime > 0) System.currentTimeMillis() - audioTriggerTime else 0
+        ConfigManager.appendLog("AMS", "=== PAGE_RESULT allowsAudio=$pageAllowsAudio elapsed=${elapsed}ms ===")
+        audioTriggerTime = 0
 
         if (pageAllowsAudio) {
             ensureUnmuted()

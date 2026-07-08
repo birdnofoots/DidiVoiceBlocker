@@ -1,7 +1,9 @@
 package com.didi.voiceblocker
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -25,6 +27,15 @@ object ConfigManager {
     var allowResourceIds: MutableSet<String> = mutableSetOf()
     var blockHints: MutableSet<String> = mutableSetOf()
     var playbackRecords: MutableList<PlaybackRecord> = mutableListOf()
+
+    var silenceThresholdMs: Long = 3000L
+    var positionCheckIntervalMs: Long = 500L
+    var maxPlaybackDurationMs: Long = 30000L
+    var scanTimeoutMs: Long = 5000L
+    var debounceMs: Long = 200L
+    var pageScanDelayMs: Long = 250L
+
+    const val ACTION_AUDIO_PARAMS_UPDATED = "com.didi.voiceblocker.AUDIO_PARAMS_UPDATED"
 
     private val defaultAllowTexts = setOf(
         // 预约单 keywords
@@ -94,6 +105,13 @@ object ConfigManager {
                 ))
             }
         } catch (_: Exception) { }
+
+        silenceThresholdMs = p.getLong("silenceThresholdMs", 3000L)
+        positionCheckIntervalMs = p.getLong("positionCheckIntervalMs", 500L)
+        maxPlaybackDurationMs = p.getLong("maxPlaybackDurationMs", 30000L)
+        scanTimeoutMs = p.getLong("scanTimeoutMs", 5000L)
+        debounceMs = p.getLong("debounceMs", 200L)
+        pageScanDelayMs = p.getLong("pageScanDelayMs", 250L)
     }
 
     fun save() {
@@ -119,6 +137,34 @@ object ConfigManager {
             putString(KEY_PLAYBACK_RECORDS, jsonArray.toString())
 
             apply()
+        }
+    }
+
+    fun saveAudioParams(
+        silenceThreshold: Long,
+        positionCheckInterval: Long,
+        maxPlaybackDuration: Long,
+        scanTimeout: Long,
+        debounce: Long,
+        pageScanDelay: Long
+    ) {
+        silenceThresholdMs = silenceThreshold
+        positionCheckIntervalMs = positionCheckInterval
+        maxPlaybackDurationMs = maxPlaybackDuration
+        scanTimeoutMs = scanTimeout
+        debounceMs = debounce
+        pageScanDelayMs = pageScanDelay
+        prefs?.edit()?.apply {
+            putLong("silenceThresholdMs", silenceThreshold)
+            putLong("positionCheckIntervalMs", positionCheckInterval)
+            putLong("maxPlaybackDurationMs", maxPlaybackDuration)
+            putLong("scanTimeoutMs", scanTimeout)
+            putLong("debounceMs", debounce)
+            putLong("pageScanDelayMs", pageScanDelay)
+            apply()
+        }
+        appContext?.let {
+            LocalBroadcastManager.getInstance(it).sendBroadcast(Intent(ACTION_AUDIO_PARAMS_UPDATED))
         }
     }
 
@@ -252,8 +298,8 @@ object ConfigManager {
         if (!file.exists()) return ""
         return try {
             val allLines = file.readLines()
-            val last100 = if (allLines.size > 100) allLines.takeLast(100) else allLines
-            "(共 ${allLines.size} 条，仅显示最后 100 条)\n---\n" + last100.joinToString("\n")
+            val last100 = if (allLines.size > 100) allLines.takeLast(100).reversed() else allLines.reversed()
+            "(共 ${allLines.size} 条，仅显示最新 100 条)\n---\n" + last100.joinToString("\n")
         } catch (_: Exception) { "" }
     }
 

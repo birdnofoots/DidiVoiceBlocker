@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -49,6 +51,7 @@ class FloatingBallService : Service() {
     private val subMenuViews = mutableListOf<View>()
     private var isSubMenuOpen = false
     private val handler = Handler(Looper.getMainLooper())
+    private var toneGen: ToneGenerator? = null
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -133,8 +136,8 @@ class FloatingBallService : Service() {
         updateBallIcon()
 
         var downX = 0f
-        var downY = 0f
         var downRawX = 0f
+        var downY = 0f
         var downRawY = 0f
         var isDragging = false
 
@@ -192,7 +195,7 @@ class FloatingBallService : Service() {
 
         val menuItems = listOf(
             Triple("📋", "白名单管理") { openMainActivity("whitelist") },
-            Triple("📊", "播报记录") { openMainActivity("records") },
+            Triple("🔊", "发出声音") { playBeep() },
             Triple(if (ConfigManager.enabled) "⏸ 关" else "▶ 开", "总开关") {
                 ConfigManager.enabled = !ConfigManager.enabled
                 ConfigManager.save()
@@ -228,9 +231,8 @@ class FloatingBallService : Service() {
                 text = emoji
                 textSize = 18f
                 gravity = Gravity.CENTER
-                setBackgroundColor(0xEE2A2A2A.toInt())
-                setPadding((6 * density).toInt(), (6 * density).toInt(),
-                    (6 * density).toInt(), (6 * density).toInt())
+                setBackgroundResource(R.drawable.submenu_item_bg)
+                setPadding(0, 0, 0, 0)
                 elevation = 16f
                 setOnClickListener { action() }
             }
@@ -283,7 +285,7 @@ class FloatingBallService : Service() {
     }
 
     private fun updateBallIcon() {
-        val icon = floatingView?.findViewById<ImageView>(R.id.ball_icon) ?: return
+        val icon = floatingView as? ImageView ?: return
         if (!ConfigManager.enabled) {
             icon.setBackgroundColor(0xFFF44336.toInt())
             icon.setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
@@ -320,5 +322,17 @@ class FloatingBallService : Service() {
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "关闭", stopPending)
             .setOngoing(true)
             .build()
+    }
+
+    private fun playBeep() {
+        try {
+            toneGen?.stopTone()
+            toneGen?.release()
+            toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+            toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
+        } catch (e: Exception) {
+            Log.e(TAG, "playBeep failed", e)
+        }
+        closeSubMenu()
     }
 }

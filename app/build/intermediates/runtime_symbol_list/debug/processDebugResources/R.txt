@@ -3073,9 +3073,10 @@ int drawable notification_template_icon_bg 0x7f0700dd
 int drawable notification_template_icon_low_bg 0x7f0700de
 int drawable notification_tile_bg 0x7f0700df
 int drawable notify_panel_notification_icon_bg 0x7f0700e0
-int drawable test_level_drawable 0x7f0700e1
-int drawable tooltip_frame_dark 0x7f0700e2
-int drawable tooltip_frame_light 0x7f0700e3
+int drawable submenu_item_bg 0x7f0700e1
+int drawable test_level_drawable 0x7f0700e2
+int drawable tooltip_frame_dark 0x7f0700e3
+int drawable tooltip_frame_light 0x7f0700e4
 int id ALT 0x7f080000
 int id BOTTOM_END 0x7f080001
 int id BOTTOM_START 0x7f080002
@@ -3798,6 +3799,9 @@ int layout select_dialog_multichoice_material 0x7f0b006a
 int layout select_dialog_singlechoice_material 0x7f0b006b
 int layout support_simple_spinner_dropdown_item 0x7f0b006c
 int mipmap ic_launcher 0x7f0d0000
+int mipmap ic_launcher_background 0x7f0d0001
+int mipmap ic_launcher_foreground 0x7f0d0002
+int mipmap ic_launcher_monochrome 0x7f0d0003
 int plurals mtrl_badge_content_description 0x7f0e0000
 int string abc_action_bar_home_description 0x7f0f0000
 int string abc_action_bar_up_description 0x7f0f0001
