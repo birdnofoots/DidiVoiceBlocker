@@ -92,6 +92,16 @@
                 android:layout_weight="1"
                 android:text="系统状态"
                 android:textAllCaps="false"
+                android:textSize="13sp"
+                android:layout_marginEnd="4dp" />
+
+            <Button
+                android:id="@+id/tabParams"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="参数设置"
+                android:textAllCaps="false"
                 android:textSize="13sp" />
         </LinearLayout>
 
@@ -387,6 +397,17 @@
                     android:layout_marginStart="4dp" />
             </LinearLayout>
         </LinearLayout>
+
+        <!-- Tab 3: 参数设置 -->
+        <LinearLayout
+            android:id="@+id/panelParams"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FF1E1E1E"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone" />
 
         <!-- Bottom buttons -->
         <LinearLayout

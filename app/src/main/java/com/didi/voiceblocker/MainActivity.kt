@@ -302,11 +302,11 @@ class MainActivity : AppCompatActivity() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             val et = EditText(this).apply {
-                setText((valueMs / 1000).toString())
+                setText(valueMs.toString())
                 setTextColor(0xFFFFFFFF.toInt())
                 setHintTextColor(0xFF666666.toInt())
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER
-                layoutParams = LinearLayout.LayoutParams(120, LinearLayout.LayoutParams.WRAP_CONTENT)
+                layoutParams = LinearLayout.LayoutParams(160, LinearLayout.LayoutParams.WRAP_CONTENT)
             }
             row.addView(et)
             row.addView(TextView(this).apply {
@@ -319,24 +319,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         addLabel("=== 音频检测 ===")
-        val etSilence = addRow("静音判定阈值", ConfigManager.silenceThresholdMs, "秒")
-        val etInterval = addRow("轮询间隔", ConfigManager.positionCheckIntervalMs, "秒")
-        val etMaxDur = addRow("最大播报时长", ConfigManager.maxPlaybackDurationMs, "秒")
+        val etSilence = addRow("静音判定阈值", ConfigManager.silenceThresholdMs, "ms")
+        val etInterval = addRow("轮询间隔", ConfigManager.positionCheckIntervalMs, "ms")
+        val etMaxDur = addRow("最大播报时长", ConfigManager.maxPlaybackDurationMs, "ms")
         addLabel("=== 页面检测 ===")
-        val etScanTimeout = addRow("扫描超时", ConfigManager.scanTimeoutMs, "秒")
-        val etDebounce = addRow("防抖延迟", ConfigManager.debounceMs, "秒")
-        val etPageDelay = addRow("扫描延迟", ConfigManager.pageScanDelayMs, "秒")
+        val etScanTimeout = addRow("扫描超时", ConfigManager.scanTimeoutMs, "ms")
+        val etDebounce = addRow("防抖延迟", ConfigManager.debounceMs, "ms")
+        val etPageDelay = addRow("扫描延迟", ConfigManager.pageScanDelayMs, "ms")
 
         root.addView(Button(this).apply {
             text = "保存参数（热更新）"
             setOnClickListener {
                 ConfigManager.saveAudioParams(
-                    silenceThreshold = (etSilence.text.toString().toLongOrNull() ?: 3) * 1000,
-                    positionCheckInterval = (etInterval.text.toString().toLongOrNull() ?: 1) * 1000,
-                    maxPlaybackDuration = (etMaxDur.text.toString().toLongOrNull() ?: 30) * 1000,
-                    scanTimeout = (etScanTimeout.text.toString().toLongOrNull() ?: 5) * 1000,
-                    debounce = (etDebounce.text.toString().toLongOrNull() ?: 0) * 1000,
-                    pageScanDelay = (etPageDelay.text.toString().toLongOrNull() ?: 0) * 1000
+                    silenceThreshold = etSilence.text.toString().toLongOrNull() ?: 3000,
+                    positionCheckInterval = etInterval.text.toString().toLongOrNull() ?: 500,
+                    maxPlaybackDuration = etMaxDur.text.toString().toLongOrNull() ?: 30000,
+                    scanTimeout = etScanTimeout.text.toString().toLongOrNull() ?: 5000,
+                    debounce = etDebounce.text.toString().toLongOrNull() ?: 200,
+                    pageScanDelay = etPageDelay.text.toString().toLongOrNull() ?: 250
                 )
                 Toast.makeText(this@MainActivity, "参数已保存并热更新", Toast.LENGTH_SHORT).show()
             }

@@ -24,6 +24,7 @@ id listBlockHintsContainer
 id listResIdWhitelistContainer
 id listTextWhitelistContainer
 id masterSwitch
+id panelParams
 id panelRecords
 id panelStats
 id panelWhitelist
@@ -31,6 +32,7 @@ id recordsView
 id statsText
 id statusIndicator
 id statusText
+id tabParams
 id tabRecords
 id tabStats
 id tabWhitelist

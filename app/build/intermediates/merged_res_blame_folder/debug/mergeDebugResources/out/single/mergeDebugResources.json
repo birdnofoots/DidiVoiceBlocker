@@ -24,12 +24,12 @@
         "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
-        "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
-        "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-xxhdpi/ic_launcher_foreground.png"
-    },
-    {
         "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/mipmap-anydpi-v26_ic_launcher.xml.flat",
         "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-xxhdpi/ic_launcher_foreground.png"
     },
     {
         "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/drawable_submenu_item_bg.xml.flat",
@@ -80,10 +80,6 @@
         "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-hdpi/ic_launcher_monochrome.png"
     },
     {
-        "merged": "com.didi.voiceblocker.app-debug-31:/layout_floating_ball.xml.flat",
-        "source": "com.didi.voiceblocker.app-main-33:/layout/floating_ball.xml"
-    },
-    {
         "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/mipmap-xhdpi_ic_launcher_foreground.png.flat",
         "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/mipmap-xhdpi/ic_launcher_foreground.png"
     },
@@ -94,6 +90,10 @@
     {
         "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/layout_activity_main.xml.flat",
         "source": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.didi.voiceblocker.app-debug-31:/layout_activity_main.xml.flat",
+        "source": "com.didi.voiceblocker.app-main-33:/layout/activity_main.xml"
     },
     {
         "merged": "/root/.gradle/daemon/8.10.2/com.didi.voiceblocker.app-debug-31:/layout_floating_ball.xml.flat",

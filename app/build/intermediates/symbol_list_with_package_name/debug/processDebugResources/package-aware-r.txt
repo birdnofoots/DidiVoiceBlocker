@@ -3437,6 +3437,7 @@ id outline
 id outward
 id overshoot
 id packed
+id panelParams
 id panelRecords
 id panelStats
 id panelWhitelist
@@ -3533,6 +3534,7 @@ id submenuarrow
 id submit_area
 id supportScrollUp
 id tabMode
+id tabParams
 id tabRecords
 id tabStats
 id tabWhitelist
