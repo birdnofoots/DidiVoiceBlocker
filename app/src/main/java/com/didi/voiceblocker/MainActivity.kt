@@ -227,13 +227,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshRecords() {
         val recordsView = findViewById<TextView>(R.id.recordsView) ?: return
-        val records = ConfigManager.getPlaybackRecordsList()
-        if (records.isEmpty()) {
+        val allRecords = ConfigManager.getPlaybackRecordsList()
+        if (allRecords.isEmpty()) {
             recordsView.text = "(暂无记录)"
             return
         }
+        val records = allRecords.sortedByDescending { it.startTime }.take(100)
         val timeSdf = SimpleDateFormat("HH:mm:ss", Locale.US)
         val sb = StringBuilder()
+        sb.appendLine("(共 ${allRecords.size} 条，显示最新 100 条)\n")
         for (r in records) {
             val startStr = timeSdf.format(Date(r.startTime))
             val endStr = timeSdf.format(Date(r.endTime))

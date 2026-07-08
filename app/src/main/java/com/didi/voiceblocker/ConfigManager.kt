@@ -252,6 +252,9 @@ object ConfigManager {
 
     fun addPlaybackRecord(record: PlaybackRecord) {
         playbackRecords.add(record)
+        if (playbackRecords.size > 2000) {
+            playbackRecords = playbackRecords.takeLast(2000).toMutableList()
+        }
         save()
     }
 
