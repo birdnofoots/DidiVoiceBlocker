@@ -27,6 +27,7 @@ object DriverDataStore {
     private const val KEY_MANUAL_PAUSED = "manual_paused"
     private const val KEY_TIMER_STOPPED = "timer_stopped"
     private const val KEY_LAST_RESET_DAY = "last_reset_day"
+    private const val KEY_LAST_RESET_PERIOD = "last_reset_period"
 
     var todayOrders: Int = 0
         private set
@@ -54,6 +55,7 @@ object DriverDataStore {
         private set
     var timerStopped: Boolean = false
         private set
+    private var lastResetPeriod: Int = 0
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -76,6 +78,7 @@ object DriverDataStore {
         weekendPeakPrev = p.getLong(KEY_WEEKEND_PEAK_PREV, 0)
         manualPaused = p.getBoolean(KEY_MANUAL_PAUSED, false)
         timerStopped = p.getBoolean(KEY_TIMER_STOPPED, false)
+        lastResetPeriod = p.getInt(KEY_LAST_RESET_PERIOD, 0)
     }
 
     fun save() {
@@ -93,6 +96,7 @@ object DriverDataStore {
             putLong(KEY_WEEKEND_PEAK_PREV, weekendPeakPrev)
             putBoolean(KEY_MANUAL_PAUSED, manualPaused)
             putBoolean(KEY_TIMER_STOPPED, timerStopped)
+            putInt(KEY_LAST_RESET_PERIOD, lastResetPeriod)
             apply()
         }
     }
@@ -126,11 +130,18 @@ object DriverDataStore {
     fun checkDayReset() {
         val cal = Calendar.getInstance()
         val day = cal.get(Calendar.DAY_OF_MONTH)
-        val lastReset = prefs?.getInt(KEY_LAST_RESET_DAY, 0) ?: 0
         val currentPeriod = if (day <= 15) 1 else 16
 
-        if (currentPeriod != lastReset) {
+        // 1. 半月 period 变化 → 触发月清零（1→16 或 16→1）
+        if (currentPeriod != lastResetPeriod) {
             checkMonthlyReset()
+            lastResetPeriod = currentPeriod
+            prefs?.edit()?.putInt(KEY_LAST_RESET_PERIOD, currentPeriod)?.apply()
+        }
+
+        // 2. 每天日期变化 → 触发日清零（只搬移时长，halfMonthOrders 累积不清零）
+        val lastResetDay = prefs?.getInt(KEY_LAST_RESET_DAY, 0) ?: 0
+        if (day != lastResetDay) {
             morningPeakPrev += morningPeakToday
             eveningPeakPrev += eveningPeakToday
             nightPeakPrev += nightPeakToday
@@ -141,7 +152,7 @@ object DriverDataStore {
             weekendPeakToday = 0
             startOfDayTotal = halfMonthOrders
             todayOrders = 0
-            prefs?.edit()?.putInt(KEY_LAST_RESET_DAY, currentPeriod)?.apply()
+            prefs?.edit()?.putInt(KEY_LAST_RESET_DAY, day)?.apply()
             save()
         }
     }
