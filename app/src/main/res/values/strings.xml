@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">滴滴静音器</string>
-    <string name="accessibility_desc">监听滴滴车主窗口变化，前台时自动静音安全提醒语音，订单/预约页面放行。</string>
-    <string name="dashboard_accessibility_desc">读取滴滴首页接单数</string>
+    <string name="accessibility_desc">滴滴静音控制</string>
+    <string name="dashboard_accessibility_desc">数据统计</string>
 </resources>

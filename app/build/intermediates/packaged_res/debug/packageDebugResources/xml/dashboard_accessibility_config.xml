@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-        android:name="数据统计"
+        android:name=".DashboardAccessibilityService"
         android:description="@string/dashboard_accessibility_desc"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
