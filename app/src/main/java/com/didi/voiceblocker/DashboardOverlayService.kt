@@ -187,13 +187,19 @@ class DashboardOverlayService : Service() {
 
         if (isMinimized) {
             params.height = WindowManager.LayoutParams.WRAP_CONTENT
-            overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.VISIBLE
-            overlayView?.findViewById<View>(R.id.btnMinimize)?.setBackgroundColor(0xFF555555.toInt())
+            overlayView?.apply {
+                findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.VISIBLE
+                findViewById<View>(R.id.btnMinimize)?.setBackgroundColor(0xFF555555.toInt())
+                requestLayout()
+            }
             windowManager?.updateViewLayout(overlayView, params)
             isMinimized = false
         } else {
             params.height = iconHeight
-            overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.GONE
+            overlayView?.apply {
+                findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.GONE
+                requestLayout()
+            }
             windowManager?.updateViewLayout(overlayView, params)
             isMinimized = true
         }

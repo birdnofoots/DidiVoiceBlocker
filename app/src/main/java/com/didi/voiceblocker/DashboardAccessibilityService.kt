@@ -17,6 +17,7 @@ class DashboardAccessibilityService : AccessibilityService() {
         const val ACTION_REFRESH_ORDERS = "com.didi.voiceblocker.REFRESH_ORDERS"
     private val REQUIRED_KEYWORDS = listOf("首页", "找单", "生活", "交流")
     private const val DIDI_PKG = "com.sdu.didi.gsui"
+    private const val DIDI_RES_VALUE = "com.sdu.didi.gsui:id/announce_main_info_value"
     }
 
     private val refreshReceiver = object : BroadcastReceiver() {
@@ -55,11 +56,11 @@ class DashboardAccessibilityService : AccessibilityService() {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             startActivity(intent)
         }
-        Thread.sleep(1500)
+        Thread.sleep(2000) // Wait for page transition
 
-        // 2. Check for 4 required keywords, navigate back if not found
+        // 2. Keep pressing BACK until 4-tab page appears, then click 首页
         var attempts = 0
-        while (attempts < 10) {
+        while (attempts < 15) {
             val root = try { rootInActiveWindow } catch (e: Exception) { null }
             if (root == null) {
                 Thread.sleep(500)
@@ -70,9 +71,9 @@ class DashboardAccessibilityService : AccessibilityService() {
             root.recycle()
 
             if (REQUIRED_KEYWORDS.all { allText.contains(it) }) {
-                // Found all keywords — click home tab
+                // Found 4-tab page — click 首页 tab
                 clickHomeTab()
-                Thread.sleep(800)
+                Thread.sleep(1200) // Wait for home content to load
                 val count = readOrderCount()
                 if (count >= 0) {
                     DriverDataStore.updateOrderCount(count)
@@ -84,12 +85,12 @@ class DashboardAccessibilityService : AccessibilityService() {
                 return
             }
 
-            // Keywords not found — press back
+            // Not on 4-tab page — press back
             performGlobalAction(GLOBAL_ACTION_BACK)
-            Thread.sleep(1000)
+            Thread.sleep(1200)
             attempts++
         }
-        ConfigManager.appendLog("DASH", "导航失败，${attempts}次重试后未找到首页")
+        ConfigManager.appendLog("DASH", "导航失败，未找到4-tab页面")
     }
 
     private fun collectAllText(node: AccessibilityNodeInfo): String {
@@ -134,50 +135,20 @@ class DashboardAccessibilityService : AccessibilityService() {
     private fun readOrderCount(): Int {
         val root = try { rootInActiveWindow } catch (e: Exception) { null } ?: return -1
         try {
-            // Find the node with text="接单数" (the title of the order count card)
-            val titleNodes = root.findAccessibilityNodeInfosByText("接单数")
-            for (titleNode in titleNodes) {
-                val parent = titleNode.parent ?: continue
-                try {
-                    // Within the same announce_all_main_info_group, find announce_main_info_value
-                    for (i in 0 until parent.childCount) {
-                        val child = parent.getChild(i) ?: continue
-                        try {
-                            val resId = child.viewIdResourceName ?: ""
-                            if (resId.endsWith("/announce_main_info_value")) {
-                                val text = child.text?.toString() ?: ""
-                                val cleaned = text.replace(Regex("[^0-9]"), "")
-                                val count = cleaned.toIntOrNull()
-                                if (count != null && count >= 0) {
-                                    return count
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                } finally {
-                    parent.recycle()
-                }
-            }
-            // Fallback: find all announce_main_info_value nodes and match by adjacent title
-            val allValueNodes = root.findAccessibilityNodeInfosByViewId("announce_main_info_value")
-            for (valueNode in allValueNodes) {
+            // Find all nodes with resource-id ending in announce_main_info_value
+            val valueNodes = root.findAccessibilityNodeInfosByViewId(DIDI_RES_VALUE)
+            for (valueNode in valueNodes) {
                 val text = valueNode.text?.toString() ?: ""
+                if (!text.matches(Regex("^\\d+$"))) continue
+                // Check parent's children for "接单数" title
                 val parent = valueNode.parent ?: continue
-                try {
-                    for (i in 0 until parent.childCount) {
-                        val sibling = parent.getChild(i) ?: continue
-                        try {
-                            if (sibling.text?.toString() == "接单数") {
-                                val cleaned = text.replace(Regex("[^0-9]"), "")
-                                val count = cleaned.toIntOrNull()
-                                if (count != null && count >= 0) {
-                                    return count
-                                }
-                            }
-                        } catch (_: Exception) {}
+                for (i in 0 until parent.childCount) {
+                    val sibling = parent.getChild(i) ?: continue
+                    if (sibling.text?.toString() == "接单数") {
+                        val count = text.toIntOrNull() ?: continue
+                        sibling.recycle()
+                        return count
                     }
-                } finally {
-                    parent.recycle()
                 }
             }
         } finally {
