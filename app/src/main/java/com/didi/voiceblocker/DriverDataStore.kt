@@ -25,6 +25,7 @@ object DriverDataStore {
     private const val KEY_WEEKEND_PEAK_TODAY = "weekend_peak_today"
     private const val KEY_WEEKEND_PEAK_PREV = "weekend_peak_prev"
     private const val KEY_MANUAL_PAUSED = "manual_paused"
+    private const val KEY_TIMER_STOPPED = "timer_stopped"
     private const val KEY_LAST_RESET_DAY = "last_reset_day"
 
     var todayOrders: Int = 0
@@ -51,6 +52,8 @@ object DriverDataStore {
         private set
     var manualPaused: Boolean = false
         private set
+    var timerStopped: Boolean = false
+        private set
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -72,6 +75,7 @@ object DriverDataStore {
         weekendPeakToday = p.getLong(KEY_WEEKEND_PEAK_TODAY, 0)
         weekendPeakPrev = p.getLong(KEY_WEEKEND_PEAK_PREV, 0)
         manualPaused = p.getBoolean(KEY_MANUAL_PAUSED, false)
+        timerStopped = p.getBoolean(KEY_TIMER_STOPPED, false)
     }
 
     fun save() {
@@ -88,6 +92,7 @@ object DriverDataStore {
             putLong(KEY_WEEKEND_PEAK_TODAY, weekendPeakToday)
             putLong(KEY_WEEKEND_PEAK_PREV, weekendPeakPrev)
             putBoolean(KEY_MANUAL_PAUSED, manualPaused)
+            putBoolean(KEY_TIMER_STOPPED, timerStopped)
             apply()
         }
     }
@@ -100,6 +105,11 @@ object DriverDataStore {
 
     fun setManualPaused(paused: Boolean) {
         manualPaused = paused
+        save()
+    }
+
+    fun setTimerStopped(stopped: Boolean) {
+        timerStopped = stopped
         save()
     }
 

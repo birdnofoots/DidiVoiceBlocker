@@ -179,15 +179,25 @@ class DashboardOverlayService : Service() {
             )
         }
 
-        // Pause/resume button
+        // Pause/resume button — 停止/开始计时
         view.findViewById<View>(R.id.btnPause)?.setOnClickListener {
-            val newPaused = !DriverDataStore.manualPaused
-            DriverDataStore.setManualPaused(newPaused)
-            updatePauseButton()
+            if (DriverDataStore.timerStopped) {
+                // 当前停止状态 → 开始计时
+                DriverDataStore.setTimerStopped(false)
+                startService(Intent(this, DriverTimerService::class.java))
+                updatePauseButton()
+            } else {
+                // 当前运行状态 → 停止计时
+                DriverDataStore.setTimerStopped(true)
+                stopService(Intent(this, DriverTimerService::class.java))
+                updatePauseButton()
+            }
         }
 
-        // Start DriverTimerService if not running
-        startService(Intent(this, DriverTimerService::class.java))
+        // Start DriverTimerService if not stopped
+        if (!DriverDataStore.timerStopped) {
+            startService(Intent(this, DriverTimerService::class.java))
+        }
     }
 
     private fun minimizePanel() {
@@ -318,11 +328,11 @@ class DashboardOverlayService : Service() {
         if (overlayView == null) return
         handler.post {
             val btn = overlayView?.findViewById<View>(R.id.btnPause) as? TextView ?: return@post
-            if (DriverDataStore.manualPaused) {
-                btn.text = "▶ 恢复计时"
+            if (DriverDataStore.timerStopped) {
+                btn.text = "▶ 开始计时"
                 btn.setBackgroundColor(0xFF4CAF50.toInt())
             } else {
-                btn.text = "⏸ 暂停计时"
+                btn.text = "⏹ 停止计时"
                 btn.setBackgroundColor(0xFFFF9800.toInt())
             }
         }
