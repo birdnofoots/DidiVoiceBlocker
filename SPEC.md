@@ -1,7 +1,7 @@
 # DidiVoiceBlocker 项目开发规格说明书
 
 > 更新版本：2026-07-07
-> 变更说明：音频检测方案从页面嗅探改为音频流检测，实现精确时长记录和三种放行条件
+> 变更说明：新增数据面板+高峰计时功能（订单计数/高峰计时/半月清零/停止计时按钮）
 
 ---
 
@@ -12,16 +12,24 @@ DidiVoiceBlocker/
 ├── app/src/main/
 │   ├── AndroidManifest.xml
 │   ├── java/com/didi/voiceblocker/
-│   │   ├── MainActivity.kt              - 主界面(白名单管理 + 记录 + 统计)
-│   │   ├── SmartVoiceBlocker.kt         - 无障碍服务(关键词检测)
-│   │   ├── AudioMonitorService.kt        - 音频监控服务(核心: 音频流检测+时长)
-│   │   ├── FloatingBallService.kt         - 悬浮球服务
-│   │   ├── BootReceiver.kt               - 开机自启
-│   │   └── ConfigManager.kt              - SharedPreferences 封装
+│   │   ├── MainActivity.kt                  - 主界面(白名单管理 + 记录 + 统计)
+│   │   ├── SmartVoiceBlocker.kt             - 无障碍服务(关键词检测)
+│   │   ├── AudioMonitorService.kt            - 音频监控服务(核心: 音频流检测+时长)
+│   │   ├── FloatingBallService.kt            - 悬浮球服务
+│   │   ├── BootReceiver.kt                   - 开机自启
+│   │   ├── ConfigManager.kt                  - SharedPreferences 封装
+│   │   ├── DriverDataStore.kt                - 数据存储（订单+高峰计时）
+│   │   ├── DriverTimerService.kt             - 前台计时服务
+│   │   ├── DashboardOverlayService.kt         - 数据面板悬浮窗
+│   │   └── DashboardAccessibilityService.kt   - 无障碍服务（读接单数）
 │   └── res/
 │       ├── layout/
-│       │   ├── activity_main.xml          - 主界面布局
-│       │   └── floating_ball.xml         - 悬浮球布局
+│       │   ├── activity_main.xml             - 主界面布局
+│       │   ├── floating_ball.xml              - 悬浮球布局
+│       │   └── dashboard_overlay.xml         - 数据面板布局
+│       ├── xml/
+│       │   ├── accessibility_config.xml       - SmartVoiceBlocker 配置
+│       │   └── dashboard_accessibility_config.xml - DashboardAccessibilityService 配置
 │       └── values/strings.xml
 ```
 
@@ -41,10 +49,13 @@ DidiVoiceBlocker/
 
 **声明的组件：**
 - `MainActivity` — LAUNCHER
-- `SmartVoiceBlocker` — 无障碍服务
+- `SmartVoiceBlocker` — 无障碍服务（滴滴静音）
 - `AudioMonitorService` — 音频监控前台服务
 - `FloatingBallService` — 前台服务, type=specialUse
 - `BootReceiver` — 开机广播
+- `DriverTimerService` — 高峰计时前台服务
+- `DashboardOverlayService` — 数据面板前台服务
+- `DashboardAccessibilityService` — 无障碍服务（读接单数）
 
 ---
 
@@ -246,10 +257,10 @@ format = PixelFormat.TRANSLUCENT
 **180度半圆环绕**：PopupWindow 的菜单项以悬浮球为圆心，在悬浮球上方呈半圆形排列（180度弧度），从左到右依次排列各菜单项。
 
 **菜单内容：**
-- [🔍 当前状态] — 显示静音/放行/播报中
 - [📋 白名单管理] → 调起 MainActivity 并传入 "whitelist" intent
-- [📊 播报记录] → 调起 MainActivity 并传入 "records" intent
-- [⚙️ 总开关] → 切换 `ConfigManager.enabled`
+- [📊 数据面板] → 启动 DashboardOverlayService
+- [⏸/▶ 总开关] → 切换 `ConfigManager.enabled`（暂停/恢复音频监控）
+- [⏹ 停止计时] → 停止 DriverTimerService + DashboardOverlayService
 - [❌ 关闭悬浮球] → `stopSelf`
 
 ### 6.5 前台通知
@@ -399,7 +410,102 @@ data class PlaybackRecord(
 
 ---
 
-## 12. 编译和输出
+## 12. 数据面板与高峰计时（2026-07-07 新增）
+
+### 12.1 概述
+
+数据面板是一个独立的悬浮窗叠加层，用于显示订单数和高峰计时数据。不依赖音频监控，可独立开启/关闭。
+
+**文件结构：**
+```
+DriverDataStore.kt              - 数据存储（SharedPreferences）
+DriverTimerService.kt          - 前台计时服务（每60秒tick）
+DashboardOverlayService.kt      - 悬浮窗服务
+DashboardAccessibilityService.kt - 无障碍服务（读滴滴接单数）
+```
+
+### 12.2 高峰时段定义
+
+| 时段 | 工作日 | 周末 |
+|------|--------|------|
+| 早高峰 | 07:00-09:59 (420-599) | — |
+| 午高峰 | — | 11:00-13:59 (660-839) |
+| 晚高峰 | 17:00-18:59 (1020-1139) | 18:00-19:59 (1080-1199) |
+| 夜高峰 | 20:00-21:59 (1200-1319) | 20:00-21:59 (1200-1319) |
+
+### 12.3 数据存储（DriverDataStore）
+
+**SharedPreferences: `"driver_monitor"`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `today_orders` | Int | 当日接单数（当日读到的值） |
+| `start_of_day_total` | Int | 半月清零时记录的基准值 |
+| `half_month_orders` | Int | 半月累计 = startOfDay + todayOrders |
+| `morning_peak_today/prev` | Long | 早高峰毫秒数（今日/历史） |
+| `evening_peak_today/prev` | Long | 晚高峰毫秒数 |
+| `night_peak_today/prev` | Long | 夜高峰毫秒数 |
+| `weekend_peak_today/prev` | Long | 周末高峰毫秒数 |
+| `timer_stopped` | Boolean | 手动停止标记 |
+| `last_reset_day` | Int | 上次清零日期 |
+
+**显示格式：** `总值 = 今日 + 历史 (百分比%)`
+
+### 12.4 计时服务（DriverTimerService）
+
+- 前台服务（通知"高峰计时运行中"）
+- 每 60 秒 tick 一次
+- 判断当前是否在高峰时段 → 是则累加
+- 半月清零时导出到 `driver_stats.log`
+
+**半月清零逻辑：**
+- 周期 1 = 每月 1-15 日，周期 16 = 16-31 日
+- 切换周期时：追加数据到 `driver_stats.log` → 清零所有计数器
+
+**导出格式：**
+```
+年-月 上半月: 订单累计总数 早高峰(小时) 晚高峰 夜高峰 高峰总时长
+年-月 下半月: ...
+```
+
+文件路径：`getExternalFilesDir(null)/driver_stats.log`
+
+### 12.5 数据面板（DashboardOverlayService）
+
+**悬浮窗布局：** `dashboard_overlay.xml`
+
+- 深色半透明背景 (#E6222222)
+- 顶部栏：拖动手柄 + 最小化 + 关闭
+- 内容区：6行数据 + 2个按钮
+- 最小化：隐藏面板，显示小图标（36dp圆形），点图标恢复
+
+**按钮：**
+- 刷新订单 → 通过 Broadcast 触发 DashboardAccessibilityService
+- 停止计时 → `stopService(DriverTimerService)` + `stopService(DashboardOverlayService)` + 数据不丢失
+
+### 12.6 无障碍导航逻辑（DashboardAccessibilityService）
+
+**刷新订单流程：**
+1. 拉起滴滴到前台，等待 3 秒
+2. 按返回键导航，最多 6 次
+3. 每步：读取接单数 → 找到"接单数"节点 → 取父节点 → 遍历兄弟找数字
+
+**接单数读取：**
+```kotlin
+root.findAccessibilityNodeInfosByText("接单数")
+  → 取第一个节点的父节点
+  → 遍历父节点所有子节点
+  → 找 text 匹配 \d+ 的节点
+```
+
+### 12.7 悬浮球菜单（新增项）
+
+- 📊 数据面板 → 启动 DashboardOverlayService
+- ⏹ 停止计时 → 停止 DriverTimerService + DashboardOverlayService
+
+---
+
+## 13. 编译和输出
 
 1. 跑 `gradle assembleDebug`
 2. 如果报错就修
