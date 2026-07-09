@@ -58,6 +58,12 @@ class AudioMonitorService : Service() {
         val usageSet = configs.map { it.audioAttributes.usage }.distinct()
         ConfigManager.appendLog("AMS", "callback: ${configs.size} configs, usages=$usageSet")
 
+        // 详细记录每条音频配置：usage + contentType + flags
+        for (config in configs) {
+            val attrs = config.audioAttributes
+            ConfigManager.appendLog("AMS", "  cfg: usage=${attrs.usage} content=${attrs.contentType} flags=${attrs.flags}")
+        }
+
         // Filter for relevant audio channels (media, voice communication, alarm)
         val relevantConfigs = configs.filter { config ->
             val usage = config.audioAttributes.usage
