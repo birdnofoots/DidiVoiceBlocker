@@ -121,22 +121,22 @@
             <Button
                 android:id="@+id/btnRefreshOrders"
                 android:layout_width="0dp"
-                android:layout_height="36dp"
+                android:layout_height="40dp"
                 android:layout_weight="1"
                 android:text="刷新订单"
                 android:textColor="#FFFFFFFF"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:backgroundTint="#FF1976D2"
                 android:layout_marginEnd="4dp" />
 
             <Button
                 android:id="@+id/btnPause"
                 android:layout_width="0dp"
-                android:layout_height="36dp"
+                android:layout_height="40dp"
                 android:layout_weight="1"
-                android:text="⏸ 暂停计时"
+                android:text="⏹ 停止计时"
                 android:textColor="#FFFFFFFF"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:backgroundTint="#FFFF9800" />
         </LinearLayout>
     </LinearLayout>
