@@ -31,6 +31,11 @@ class DriverTimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         DriverDataStore.init(this)
+        // 如果之前被手动停止，不再自动启动计时
+        if (DriverDataStore.timerStopped) {
+            stopSelf()
+            return
+        }
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
         handler.post(timerRunnable)
@@ -50,6 +55,7 @@ class DriverTimerService : Service() {
 
     private fun tick() {
         if (DriverDataStore.manualPaused) return
+        if (DriverDataStore.timerStopped) return
 
         val cal = Calendar.getInstance()
         val hour = cal.get(Calendar.HOUR_OF_DAY)
