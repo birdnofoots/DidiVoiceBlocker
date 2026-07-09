@@ -110,8 +110,11 @@ object DriverDataStore {
     }
 
     fun updateOrderCount(count: Int) {
+        val delta = count - todayOrders
+        if (delta > 0) {
+            halfMonthOrders += delta  // JS 风格：只增不减，delta 为正才累加
+        }
         todayOrders = count
-        halfMonthOrders = startOfDayTotal + count
         save()
     }
 
@@ -151,7 +154,6 @@ object DriverDataStore {
         val currentPeriod = if (day <= 15) 1 else 16
 
         // 1. 半月 period 变化 → 触发月清零（1→16 或 16→1）
-        // 只有 lastResetPeriod 已被设置过（!=0）才触发，避免首次运行误判
         if (lastResetPeriod != 0 && currentPeriod != lastResetPeriod) {
             checkMonthlyReset()
             lastResetPeriod = currentPeriod
@@ -169,7 +171,7 @@ object DriverDataStore {
             eveningPeakToday = 0
             nightPeakToday = 0
             weekendPeakToday = 0
-            startOfDayTotal = halfMonthOrders
+            startOfDayTotal = halfMonthOrders  // 保存日初的累计订单数（用于显示公式）
             todayOrders = 0
             prefs?.edit()?.putInt(KEY_LAST_RESET_DAY, day)?.apply()
             save()
