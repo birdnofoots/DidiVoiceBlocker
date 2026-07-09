@@ -172,6 +172,13 @@ class DashboardOverlayService : Service() {
             minimizePanel()
         }
 
+        // 长按标题栏 → 调试：重置历史订单数为4（临时修复半月清零遗留）
+        view.findViewById<View>(R.id.dragHandle)?.setOnLongClickListener {
+            DriverDataStore.setManualOrderCount(halfMonthOrders = 4, startOfDayTotal = 4)
+            refreshDisplay()
+            true
+        }
+
         // Refresh orders button
         view.findViewById<View>(R.id.btnRefreshOrders)?.setOnClickListener {
             LocalBroadcastManager.getInstance(this).sendBroadcast(

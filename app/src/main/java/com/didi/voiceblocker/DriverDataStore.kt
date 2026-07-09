@@ -117,6 +117,14 @@ object DriverDataStore {
         save()
     }
 
+    // 调试用：手动设置订单累计数（临时修复）
+    fun setManualOrderCount(halfMonthOrders: Int, startOfDayTotal: Int) {
+        this.halfMonthOrders = halfMonthOrders
+        this.startOfDayTotal = startOfDayTotal
+        this.todayOrders = 0
+        save()
+    }
+
     fun addPeakMinutes(type: String, millis: Long) {
         when (type) {
             "morning" -> morningPeakToday += millis
