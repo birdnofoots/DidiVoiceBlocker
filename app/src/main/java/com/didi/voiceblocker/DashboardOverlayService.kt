@@ -19,7 +19,6 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -35,8 +34,12 @@ class DashboardOverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
-    private var layoutParams: WindowManager.LayoutParams? = null
+    private var panelParams: WindowManager.LayoutParams? = null
+    private var minimizedView: View? = null
+    private var minimizedParams: WindowManager.LayoutParams? = null
     private var isMinimized = false
+    private var savedX = 0
+    private var savedY = 0
     private val handler = Handler(Looper.getMainLooper())
 
     private var tvOrders: TextView? = null
@@ -45,7 +48,6 @@ class DashboardOverlayService : Service() {
     private var tvNight: TextView? = null
     private var tvWeekend: TextView? = null
     private var tvTotal: TextView? = null
-    private var btnPause: Button? = null
 
     private val displayReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -76,7 +78,6 @@ class DashboardOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (overlayView == null) showOverlay()
         return START_STICKY
     }
 
@@ -97,17 +98,32 @@ class DashboardOverlayService : Service() {
         overlayView = inflater.inflate(R.layout.dashboard_overlay, null)
         setupViews()
 
-        val params = WindowManager.LayoutParams(
+        panelParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         }
-        layoutParams = params
-        windowManager?.addView(overlayView, params)
+        windowManager?.addView(overlayView, panelParams)
+    }
+
+    private fun removeOverlay() {
+        overlayView?.let {
+            try { windowManager?.removeView(it) } catch (_: Exception) {}
+        }
+        overlayView = null
+        removeMinimizedIcon()
+    }
+
+    private fun removeMinimizedIcon() {
+        minimizedView?.let {
+            try { windowManager?.removeView(it) } catch (_: Exception) {}
+        }
+        minimizedView = null
     }
 
     private fun setupViews() {
@@ -118,9 +134,8 @@ class DashboardOverlayService : Service() {
         tvNight = view.findViewById(R.id.tvNight)
         tvWeekend = view.findViewById(R.id.tvWeekend)
         tvTotal = view.findViewById(R.id.tvTotal)
-        btnPause = view.findViewById(R.id.btnPause)
 
-        // Make draggable
+        // Make the whole panel draggable via dragHandle
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
@@ -129,37 +144,32 @@ class DashboardOverlayService : Service() {
         view.findViewById<View>(R.id.dragHandle)?.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    val params = overlayView?.layoutParams as? WindowManager.LayoutParams ?: return@setOnTouchListener false
-                    initialX = params.x
-                    initialY = params.y
+                    val pp = panelParams ?: return@setOnTouchListener false
+                    initialX = pp.x
+                    initialY = pp.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val params = overlayView?.layoutParams as? WindowManager.LayoutParams ?: return@setOnTouchListener false
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager?.updateViewLayout(overlayView, params)
+                    val pp = panelParams ?: return@setOnTouchListener false
+                    pp.x = initialX + (event.rawX - initialTouchX).toInt()
+                    pp.y = initialY + (event.rawY - initialTouchY).toInt()
+                    windowManager?.updateViewLayout(overlayView, pp)
                     true
                 }
                 else -> false
             }
         }
 
-        // Close button
+        // Close button — stop service
         view.findViewById<View>(R.id.btnClose)?.setOnClickListener {
             stopSelf()
         }
 
-        // Minimize button — shrink to small icon
+        // Minimize button — hide panel, show small icon
         view.findViewById<View>(R.id.btnMinimize)?.setOnClickListener {
-            toggleMinimize()
-        }
-
-        // Click on header area (when minimized) also restores
-        view.findViewById<View>(R.id.dragHandle)?.setOnClickListener {
-            if (isMinimized) toggleMinimize()
+            minimizePanel()
         }
 
         // Refresh orders button
@@ -170,7 +180,7 @@ class DashboardOverlayService : Service() {
         }
 
         // Pause/resume button
-        btnPause?.setOnClickListener {
+        view.findViewById<View>(R.id.btnPause)?.setOnClickListener {
             val newPaused = !DriverDataStore.manualPaused
             DriverDataStore.setManualPaused(newPaused)
             updatePauseButton()
@@ -180,29 +190,115 @@ class DashboardOverlayService : Service() {
         startService(Intent(this, DriverTimerService::class.java))
     }
 
-    private fun toggleMinimize() {
-        val params = layoutParams ?: return
-        val density = resources.displayMetrics.density
-        val iconHeight = (40 * density).toInt()
+    private fun minimizePanel() {
+        if (isMinimized) return
 
-        if (isMinimized) {
-            params.height = WindowManager.LayoutParams.WRAP_CONTENT
-            overlayView?.apply {
-                findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.VISIBLE
-                findViewById<View>(R.id.btnMinimize)?.setBackgroundColor(0xFF555555.toInt())
-                requestLayout()
-            }
-            windowManager?.updateViewLayout(overlayView, params)
-            isMinimized = false
-        } else {
-            params.height = iconHeight
-            overlayView?.apply {
-                findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.GONE
-                requestLayout()
-            }
-            windowManager?.updateViewLayout(overlayView, params)
-            isMinimized = true
+        // Save current position
+        val pp = panelParams
+        if (pp != null) {
+            savedX = pp.x
+            savedY = pp.y
         }
+
+        // Remove full panel
+        overlayView?.let {
+            try { windowManager?.removeView(it) } catch (_: Exception) {}
+        }
+        overlayView = null
+        panelParams = null
+
+        // Show small icon
+        showMinimizedIcon()
+        isMinimized = true
+    }
+
+    private fun showMinimizedIcon() {
+        val density = resources.displayMetrics.density
+        val size = (36 * density).toInt()
+
+        val iconView = TextView(this).apply {
+            text = "📊"
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(0xCC222222.toInt())
+        }
+
+        minimizedParams = WindowManager.LayoutParams(
+            size, size,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = savedX
+            y = savedY
+        }
+
+        iconView.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialTX = event.rawX
+                    initialTY = event.rawY
+                    initialPX = minimizedParams?.x ?: 0
+                    initialPY = minimizedParams?.y ?: 0
+                    dragged = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - initialTX
+                    val dy = event.rawY - initialTY
+                    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragged = true
+                    minimizedParams?.x = (initialPX + dx).toInt()
+                    minimizedParams?.y = (initialPY + dy).toInt()
+                    try { windowManager?.updateViewLayout(iconView, minimizedParams) } catch (_: Exception) {}
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!dragged) restorePanel()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        try {
+            windowManager?.addView(iconView, minimizedParams)
+            minimizedView = iconView
+        } catch (e: Exception) {
+            Log.e(TAG, "添加最小化图标失败", e)
+        }
+    }
+
+    private var initialTX = 0f
+    private var initialTY = 0f
+    private var initialPX = 0
+    private var initialPY = 0
+    private var dragged = false
+
+    private fun restorePanel() {
+        if (!isMinimized) return
+        removeMinimizedIcon()
+        isMinimized = false
+
+        // Recreate and show full panel at saved position
+        val inflater = LayoutInflater.from(this)
+        overlayView = inflater.inflate(R.layout.dashboard_overlay, null)
+        setupViews()
+
+        panelParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                    or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            x = savedX
+            y = savedY
+        }
+        windowManager?.addView(overlayView, panelParams)
     }
 
     private fun refreshDisplay() {
@@ -219,20 +315,17 @@ class DashboardOverlayService : Service() {
     }
 
     private fun updatePauseButton() {
-        if (DriverDataStore.manualPaused) {
-            btnPause?.text = "▶ 恢复计时"
-            btnPause?.setBackgroundColor(0xFF4CAF50.toInt())
-        } else {
-            btnPause?.text = "⏸ 暂停计时"
-            btnPause?.setBackgroundColor(0xFFFF9800.toInt())
+        if (overlayView == null) return
+        handler.post {
+            val btn = overlayView?.findViewById<View>(R.id.btnPause) as? TextView ?: return@post
+            if (DriverDataStore.manualPaused) {
+                btn.text = "▶ 恢复计时"
+                btn.setBackgroundColor(0xFF4CAF50.toInt())
+            } else {
+                btn.text = "⏸ 暂停计时"
+                btn.setBackgroundColor(0xFFFF9800.toInt())
+            }
         }
-    }
-
-    private fun removeOverlay() {
-        overlayView?.let {
-            try { windowManager?.removeView(it) } catch (_: Exception) {}
-        }
-        overlayView = null
     }
 
     private fun createNotificationChannel() {
