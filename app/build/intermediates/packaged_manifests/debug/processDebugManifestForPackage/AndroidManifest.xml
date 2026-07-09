@@ -71,6 +71,27 @@
             </intent-filter>
         </receiver>
 
+        <service
+            android:name="com.didi.voiceblocker.DriverTimerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+        <service
+            android:name="com.didi.voiceblocker.DashboardOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse" />
+        <service
+            android:name="com.didi.voiceblocker.DashboardAccessibilityService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/dashboard_accessibility_config" />
+        </service>
+
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="com.didi.voiceblocker.androidx-startup"

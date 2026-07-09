@@ -15,10 +15,8 @@ class DashboardAccessibilityService : AccessibilityService() {
     companion object {
         const val TAG = "DashA11y"
         const val ACTION_REFRESH_ORDERS = "com.didi.voiceblocker.REFRESH_ORDERS"
-        private val REQUIRED_KEYWORDS = listOf("首页", "找单", "生活", "交流")
-        private const val DIDI_PKG = "com.sdu.didi.gsui"
-        private const val DIDI_RES_ORDER_COUNT = "announce_main_info_value"
-        private const val DIDI_RES_HOME_TAB = "announce_main_tab_name"
+    private val REQUIRED_KEYWORDS = listOf("首页", "找单", "生活", "交流")
+    private const val DIDI_PKG = "com.sdu.didi.gsui"
     }
 
     private val refreshReceiver = object : BroadcastReceiver() {
@@ -59,7 +57,7 @@ class DashboardAccessibilityService : AccessibilityService() {
         }
         Thread.sleep(1500)
 
-        // 2. Check for 4 required keywords, press back if not found
+        // 2. Check for 4 required keywords, navigate back if not found
         var attempts = 0
         while (attempts < 10) {
             val root = try { rootInActiveWindow } catch (e: Exception) { null }
@@ -75,12 +73,13 @@ class DashboardAccessibilityService : AccessibilityService() {
                 // Found all keywords — click home tab
                 clickHomeTab()
                 Thread.sleep(800)
-                // Read order count
                 val count = readOrderCount()
                 if (count >= 0) {
                     DriverDataStore.updateOrderCount(count)
                     Log.d(TAG, "Orders updated: $count")
                     ConfigManager.appendLog("DASH", "订单数=$count")
+                } else {
+                    ConfigManager.appendLog("DASH", "读取接单数失败")
                 }
                 return
             }
@@ -135,12 +134,51 @@ class DashboardAccessibilityService : AccessibilityService() {
     private fun readOrderCount(): Int {
         val root = try { rootInActiveWindow } catch (e: Exception) { null } ?: return -1
         try {
-            // Try resource ID first
-            val nodes = root.findAccessibilityNodeInfosByViewId("${DIDI_PKG}:id/${DIDI_RES_ORDER_COUNT}")
-            if (nodes.isNotEmpty()) {
-                val text = nodes[0].text?.toString() ?: return -1
-                val cleaned = text.replace(Regex("[^0-9]"), "")
-                return cleaned.toIntOrNull() ?: -1
+            // Find the node with text="接单数" (the title of the order count card)
+            val titleNodes = root.findAccessibilityNodeInfosByText("接单数")
+            for (titleNode in titleNodes) {
+                val parent = titleNode.parent ?: continue
+                try {
+                    // Within the same announce_all_main_info_group, find announce_main_info_value
+                    for (i in 0 until parent.childCount) {
+                        val child = parent.getChild(i) ?: continue
+                        try {
+                            val resId = child.viewIdResourceName ?: ""
+                            if (resId.endsWith("/announce_main_info_value")) {
+                                val text = child.text?.toString() ?: ""
+                                val cleaned = text.replace(Regex("[^0-9]"), "")
+                                val count = cleaned.toIntOrNull()
+                                if (count != null && count >= 0) {
+                                    return count
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                } finally {
+                    parent.recycle()
+                }
+            }
+            // Fallback: find all announce_main_info_value nodes and match by adjacent title
+            val allValueNodes = root.findAccessibilityNodeInfosByViewId("announce_main_info_value")
+            for (valueNode in allValueNodes) {
+                val text = valueNode.text?.toString() ?: ""
+                val parent = valueNode.parent ?: continue
+                try {
+                    for (i in 0 until parent.childCount) {
+                        val sibling = parent.getChild(i) ?: continue
+                        try {
+                            if (sibling.text?.toString() == "接单数") {
+                                val cleaned = text.replace(Regex("[^0-9]"), "")
+                                val count = cleaned.toIntOrNull()
+                                if (count != null && count >= 0) {
+                                    return count
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                } finally {
+                    parent.recycle()
+                }
             }
         } finally {
             root.recycle()

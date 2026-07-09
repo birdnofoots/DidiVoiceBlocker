@@ -35,6 +35,7 @@ class DashboardOverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
+    private var layoutParams: WindowManager.LayoutParams? = null
     private var isMinimized = false
     private val handler = Handler(Looper.getMainLooper())
 
@@ -105,7 +106,7 @@ class DashboardOverlayService : Service() {
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         }
-
+        layoutParams = params
         windowManager?.addView(overlayView, params)
     }
 
@@ -151,15 +152,14 @@ class DashboardOverlayService : Service() {
             stopSelf()
         }
 
-        // Minimize button
+        // Minimize button — shrink to small icon
         view.findViewById<View>(R.id.btnMinimize)?.setOnClickListener {
-            if (isMinimized) {
-                overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.VISIBLE
-                isMinimized = false
-            } else {
-                overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.GONE
-                isMinimized = true
-            }
+            toggleMinimize()
+        }
+
+        // Click on header area (when minimized) also restores
+        view.findViewById<View>(R.id.dragHandle)?.setOnClickListener {
+            if (isMinimized) toggleMinimize()
         }
 
         // Refresh orders button
@@ -178,6 +178,25 @@ class DashboardOverlayService : Service() {
 
         // Start DriverTimerService if not running
         startService(Intent(this, DriverTimerService::class.java))
+    }
+
+    private fun toggleMinimize() {
+        val params = layoutParams ?: return
+        val density = resources.displayMetrics.density
+        val iconHeight = (40 * density).toInt()
+
+        if (isMinimized) {
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
+            overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.VISIBLE
+            overlayView?.findViewById<View>(R.id.btnMinimize)?.setBackgroundColor(0xFF555555.toInt())
+            windowManager?.updateViewLayout(overlayView, params)
+            isMinimized = false
+        } else {
+            params.height = iconHeight
+            overlayView?.findViewById<LinearLayout>(R.id.contentArea)?.visibility = View.GONE
+            windowManager?.updateViewLayout(overlayView, params)
+            isMinimized = true
+        }
     }
 
     private fun refreshDisplay() {
