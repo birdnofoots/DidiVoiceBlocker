@@ -184,6 +184,7 @@ class DashboardOverlayService : Service() {
             if (DriverDataStore.timerStopped) {
                 // 当前停止状态 → 开始计时
                 DriverDataStore.setTimerStopped(false)
+                DriverDataStore.setManualPaused(false) // 确保计时不被暂停
                 startService(Intent(this, DriverTimerService::class.java))
                 updatePauseButton()
             } else {
