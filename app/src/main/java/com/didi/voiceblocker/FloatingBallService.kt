@@ -10,8 +10,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.os.Build
 import android.os.IBinder
 import android.os.Handler
@@ -51,7 +49,6 @@ class FloatingBallService : Service() {
     private val subMenuViews = mutableListOf<View>()
     private var isSubMenuOpen = false
     private val handler = Handler(Looper.getMainLooper())
-    private var toneGen: ToneGenerator? = null
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -195,7 +192,10 @@ class FloatingBallService : Service() {
 
         val menuItems = listOf(
             Triple("📋", "白名单管理") { openMainActivity("whitelist") },
-            Triple("🔊", "发出声音") { playBeep() },
+            Triple("📊", "数据面板") {
+                startService(Intent(this, DashboardOverlayService::class.java))
+                closeSubMenu()
+            },
             Triple(if (ConfigManager.enabled) "⏸ 关" else "▶ 开", "总开关") {
                 ConfigManager.enabled = !ConfigManager.enabled
                 ConfigManager.save()
@@ -322,17 +322,5 @@ class FloatingBallService : Service() {
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "关闭", stopPending)
             .setOngoing(true)
             .build()
-    }
-
-    private fun playBeep() {
-        try {
-            toneGen?.stopTone()
-            toneGen?.release()
-            toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
-            toneGen?.startTone(ToneGenerator.TONE_PROP_BEEP2, 200)
-        } catch (e: Exception) {
-            Log.e(TAG, "playBeep failed", e)
-        }
-        closeSubMenu()
     }
 }
