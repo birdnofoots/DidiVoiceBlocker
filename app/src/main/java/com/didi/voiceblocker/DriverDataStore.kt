@@ -79,6 +79,14 @@ object DriverDataStore {
         manualPaused = p.getBoolean(KEY_MANUAL_PAUSED, false)
         timerStopped = p.getBoolean(KEY_TIMER_STOPPED, false)
         lastResetPeriod = p.getInt(KEY_LAST_RESET_PERIOD, 0)
+        // 首次运行或 prefs 被重置后，把 lastResetPeriod 初始化为当前 period，
+        // 避免误把 "0 != 当前period" 当作 period 变化而清零所有数据
+        if (lastResetPeriod == 0) {
+            val cal = Calendar.getInstance()
+            val day = cal.get(Calendar.DAY_OF_MONTH)
+            lastResetPeriod = if (day <= 15) 1 else 16
+            p.edit().putInt(KEY_LAST_RESET_PERIOD, lastResetPeriod).apply()
+        }
     }
 
     fun save() {
@@ -119,10 +127,12 @@ object DriverDataStore {
 
     // 调试用：手动设置订单累计数（临时修复）
     fun setManualOrderCount(halfMonthOrders: Int, startOfDayTotal: Int) {
+        android.util.Log.d("DSDBG", "setManualOrderCount called: halfMonthOrders=$halfMonthOrders, startOfDayTotal=$startOfDayTotal")
         this.halfMonthOrders = halfMonthOrders
         this.startOfDayTotal = startOfDayTotal
         this.todayOrders = 0
         save()
+        android.util.Log.d("DSDBG", "after save: halfMonthOrders=${this.halfMonthOrders}, startOfDayTotal=${this.startOfDayTotal}")
     }
 
     fun addPeakMinutes(type: String, millis: Long) {
@@ -141,7 +151,8 @@ object DriverDataStore {
         val currentPeriod = if (day <= 15) 1 else 16
 
         // 1. 半月 period 变化 → 触发月清零（1→16 或 16→1）
-        if (currentPeriod != lastResetPeriod) {
+        // 只有 lastResetPeriod 已被设置过（!=0）才触发，避免首次运行误判
+        if (lastResetPeriod != 0 && currentPeriod != lastResetPeriod) {
             checkMonthlyReset()
             lastResetPeriod = currentPeriod
             prefs?.edit()?.putInt(KEY_LAST_RESET_PERIOD, currentPeriod)?.apply()

@@ -172,10 +172,14 @@ class DashboardOverlayService : Service() {
             minimizePanel()
         }
 
-        // 长按标题栏 → 调试：重置历史订单数为4（临时修复半月清零遗留）
+        // 长按标题栏 → 调试：强制写入 halfMonthOrders=4, startOfDayTotal=4, todayOrders=0
         view.findViewById<View>(R.id.dragHandle)?.setOnLongClickListener {
             DriverDataStore.setManualOrderCount(halfMonthOrders = 4, startOfDayTotal = 4)
-            refreshDisplay()
+            handler.postDelayed({
+                val orders = DriverDataStore.getDisplayOrder()
+                tvOrders?.text = "订单数:     $orders"
+                android.util.Log.d("DASH_DEBUG", "长按后订单显示: $orders")
+            }, 500)
             true
         }
 
