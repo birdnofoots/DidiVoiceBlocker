@@ -58,13 +58,13 @@ class AudioMonitorService : Service() {
         val usageSet = configs.map { it.audioAttributes.usage }.distinct()
         ConfigManager.appendLog("AMS", "callback: ${configs.size} configs, usages=$usageSet")
 
-        // 详细记录每条音频配置：usage + contentType + flags
+        // 详细记录每条音频配置：usage + contentType + flags（方便排查漏检）
         for (config in configs) {
             val attrs = config.audioAttributes
             ConfigManager.appendLog("AMS", "  cfg: usage=${attrs.usage} content=${attrs.contentType} flags=${attrs.flags}")
         }
 
-        // Filter for relevant audio channels (media, voice communication, alarm)
+        // 过滤用于静音的音频通道（media, voice communication, alarm）
         val relevantConfigs = configs.filter { config ->
             val usage = config.audioAttributes.usage
             usage == AudioAttributes.USAGE_MEDIA ||
@@ -72,23 +72,26 @@ class AudioMonitorService : Service() {
                     usage == AudioAttributes.USAGE_ALARM
         }
 
+        // 核心修复：只要有任何音频活动（不限usage），就触发页面检测
+        // 页面检测决定是否放行，检测逻辑在 SmartVoiceBlocker 里
+        if (configs.isNotEmpty()) {
+            lastActivityTime = System.currentTimeMillis()
+
+            if (state == State.IDLE) {
+                startPlayback()
+            } else {
+                positionStableStartTime = 0L
+            }
+        }
+
         if (relevantConfigs.isEmpty()) {
+            // 无相关音频配置，但有其他音频活动 → 检查是否静音期结束
             ConfigManager.appendLog("AMS", "no relevant configs, relevantUsages=${usageSet}")
             if (state == State.PLAYING) {
                 checkForSilence()
             }
-            return
-        }
-
-        // We have active audio - this counts as "position changing" activity
-        lastActivityTime = System.currentTimeMillis()
-        ConfigManager.appendLog("AMS", "relevant=${relevantConfigs.size}, state=$state")
-
-        if (state == State.IDLE) {
-            startPlayback()
         } else {
-            // PLAYING state - reset stability timer
-            positionStableStartTime = 0L
+            ConfigManager.appendLog("AMS", "relevant=${relevantConfigs.size}, state=$state")
         }
     }
 
