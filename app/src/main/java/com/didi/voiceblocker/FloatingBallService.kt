@@ -202,6 +202,11 @@ class FloatingBallService : Service() {
                 updateBallIcon()
                 closeSubMenu()
             },
+            Triple("⏹", "停止计时") {
+                stopService(Intent(this, DriverTimerService::class.java))
+                stopService(Intent(this, DashboardOverlayService::class.java))
+                closeSubMenu()
+            },
             Triple("❌", "关闭悬浮球") { stopSelf() }
         )
 
