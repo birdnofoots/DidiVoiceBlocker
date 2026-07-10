@@ -39,6 +39,9 @@ class AudioMonitorService : Service() {
     private enum class State { IDLE, PLAYING }
     private var state = State.IDLE
 
+    // 标记: callback 上一次报告是否为 0 configs（用于区分真正音频结束 vs 连续音频）
+    private var allConfigsAbsent = false
+
     private val handler = Handler(Looper.getMainLooper())
 
     // Page check state
@@ -76,12 +79,16 @@ class AudioMonitorService : Service() {
         // 页面检测决定是否放行，检测逻辑在 SmartVoiceBlocker 里
         if (configs.isNotEmpty()) {
             lastActivityTime = System.currentTimeMillis()
+            allConfigsAbsent = false   // 有音频配置 → 音频仍在播放
 
             if (state == State.IDLE) {
                 startPlayback()
             } else {
                 positionStableStartTime = 0L
             }
+        } else {
+            // configs 为空 → 音频已停止
+            allConfigsAbsent = true
         }
 
         if (relevantConfigs.isEmpty()) {
@@ -115,22 +122,24 @@ class AudioMonitorService : Service() {
     private val positionCheckRunnable = object : Runnable {
         override fun run() {
             if (this@AudioMonitorService.state == State.PLAYING) {
-                // Check if position has been stable (no activity for a while)
-                val timeSinceLastActivity = System.currentTimeMillis() - lastActivityTime
-
-                if (timeSinceLastActivity >= SILENCE_THRESHOLD_MS) {
-                    if (positionStableStartTime == 0L) {
-                        positionStableStartTime = System.currentTimeMillis()
+                // 只有 callback 报告 0 configs（音频真正结束）后才检测沉默
+                // 连续音频（如Bilibili）不会产生新的config变更，不应被误判为沉默
+                if (allConfigsAbsent) {
+                    val timeSinceLastActivity = System.currentTimeMillis() - lastActivityTime
+                    if (timeSinceLastActivity >= SILENCE_THRESHOLD_MS) {
+                        if (positionStableStartTime == 0L) {
+                            positionStableStartTime = System.currentTimeMillis()
+                        }
+                        val stableDuration = System.currentTimeMillis() - positionStableStartTime
+                        if (stableDuration >= SILENCE_THRESHOLD_MS) {
+                            handleSilence()
+                        }
+                    } else {
+                        positionStableStartTime = 0L
                     }
-                    val stableDuration = System.currentTimeMillis() - positionStableStartTime
-                    if (stableDuration >= SILENCE_THRESHOLD_MS) {
-                        handleSilence()
-                    }
-                } else {
-                    positionStableStartTime = 0L
                 }
 
-                // Max duration check
+                // Max duration check — 安全网，防止无限静音
                 if (System.currentTimeMillis() - playbackStartTime >= MAX_PLAYBACK_DURATION_MS) {
                     Log.w(TAG, "Max playback duration reached")
                     handleSilence()
