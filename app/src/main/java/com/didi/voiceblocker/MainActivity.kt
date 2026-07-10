@@ -270,7 +270,8 @@ class MainActivity : AppCompatActivity() {
                 statsView.text = "(日志为空)"
             } else {
                 statsView.text = log
-                statsView.post { (statsView.parent as? ScrollView)?.scrollTo(0, statsView.height) }
+                // 日志反序(最新在前) — 滚动到顶部看最新
+                statsView.post { (statsView.parent as? ScrollView)?.scrollTo(0, 0) }
             }
             Toast.makeText(this, "日志路径: ${ConfigManager.getLogPath()}", Toast.LENGTH_LONG).show()
         }
