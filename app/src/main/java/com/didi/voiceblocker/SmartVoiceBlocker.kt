@@ -29,6 +29,7 @@ class SmartVoiceBlocker : AccessibilityService() {
         private const val DIDI_PKG = "com.sdu.didi.gsui"
         private val SCAN_TIMEOUT_MS: Long get() = ConfigManager.scanTimeoutMs
         private val DEBOUNCE_MS: Long get() = ConfigManager.debounceMs
+        private val RETRY_INTERVAL_MS: Long get() = ConfigManager.pageScanDelayMs
         var instance: SmartVoiceBlocker? = null
             private set
     }
@@ -194,10 +195,10 @@ class SmartVoiceBlocker : AccessibilityService() {
             return
         }
 
-        ConfigManager.appendLog("SVB", "root_not_accessible, retry ${attempt+1}/3 in 200ms")
+        ConfigManager.appendLog("SVB", "root_not_accessible, retry ${attempt+1}/3 in ${RETRY_INTERVAL_MS}ms")
         handler.postDelayed({
             tryScanWithRetry(attempt + 1)
-        }, 200L)
+        }, RETRY_INTERVAL_MS)
     }
 
     private fun performPageScanAndNotify() {
