@@ -86,11 +86,16 @@ class AudioMonitorService : Service() {
             } else {
                 positionStableStartTime = 0L
                 // 已静音中但有新音频进来 → 重新检测页面（预约单/实时单会带音频弹窗）
+                // 加200ms延迟让弹窗有时间渲染完成
                 if (isMuted) {
-                    ConfigManager.appendLog("AMS", "re-check page on new audio during mute")
-                    pendingPageCheck = true
-                    pageCheckStartTime = System.currentTimeMillis()
-                    pullDidiToForeground()
+                    ConfigManager.appendLog("AMS", "re-check page on new audio during mute, delay 200ms")
+                    handler.postDelayed({
+                        if (isMuted) {
+                            pendingPageCheck = true
+                            pageCheckStartTime = System.currentTimeMillis()
+                            pullDidiToForeground()
+                        }
+                    }, 200L)
                 }
             }
         } else {
