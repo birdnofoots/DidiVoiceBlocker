@@ -265,6 +265,11 @@ class AudioMonitorService : Service() {
             ensureMuted()
             isMuted = true
             Log.d(TAG, "Page blocks audio - muted")
+            // allowsAudio=false 且页面检测已完成，但音频可能已结束
+            // 如果 state==IDLE（音频已停止），直接检查是否该 unmute
+            if (state == State.IDLE) {
+                checkForSilence()
+            }
         }
 
         updateLastRecord(pageAllowsAudio)
