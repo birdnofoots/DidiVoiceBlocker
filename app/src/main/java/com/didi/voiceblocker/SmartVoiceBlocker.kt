@@ -170,12 +170,16 @@ class SmartVoiceBlocker : AccessibilityService() {
 
     private fun checkCurrentPageAndNotify() {
         ConfigManager.appendLog("SVB", ">>> checkCurrentPageAndNotify")
+        tryScanWithRetry(0)
+    }
 
+    // 自动重试: 根节点不可用时等200ms再试，最多3次
+    private fun tryScanWithRetry(attempt: Int) {
         // 先尝试立即获取 rootInActiveWindow
-        // 如果 DiDi 已在前台 → 页面已经加载完 → 不需要等 pageScanDelayMs
         val root = try { rootInActiveWindow } catch (e: Exception) { null }
+
         if (root != null && root.packageName?.toString() == DIDI_PKG) {
-            ConfigManager.appendLog("SVB", "root_accessible, immediate scan")
+            ConfigManager.appendLog("SVB", "root_accessible, scan now")
             handler.post {
                 val start = System.currentTimeMillis()
                 performPageScanAndNotify()
@@ -184,13 +188,16 @@ class SmartVoiceBlocker : AccessibilityService() {
             return
         }
 
-        // DiDi 不在前台 → 等页面切换
-        ConfigManager.appendLog("SVB", "root_not_accessible, wait ${ConfigManager.pageScanDelayMs}ms")
+        if (attempt >= 3) {
+            ConfigManager.appendLog("SVB", "retry_exhausted, no_root")
+            notifyPageResult(false)
+            return
+        }
+
+        ConfigManager.appendLog("SVB", "root_not_accessible, retry ${attempt+1}/3 in 200ms")
         handler.postDelayed({
-            val start = System.currentTimeMillis()
-            performPageScanAndNotify()
-            ConfigManager.appendLog("SVB", "page_check_total=${System.currentTimeMillis()-start}ms")
-        }, ConfigManager.pageScanDelayMs)
+            tryScanWithRetry(attempt + 1)
+        }, 200L)
     }
 
     private fun performPageScanAndNotify() {
