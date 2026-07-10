@@ -267,6 +267,7 @@ object ConfigManager {
 
     // ── Debug log ───────────────────────────────────────────────
     private const val LOG_FILE = "debug.log"
+    private var logAppendCount = 0   // 批量裁切计数器
 
     fun appendLog(tag: String, msg: String) {
         val ctx = appContext ?: return
@@ -275,10 +276,14 @@ object ConfigManager {
         try {
             val file = java.io.File(ctx.getExternalFilesDir(null), LOG_FILE)
             file.appendText(line)
-            // Trim to last 2000 lines if file gets too large
-            val lines = file.readLines()
-            if (lines.size > 2000) {
-                file.writeText(lines.takeLast(2000).joinToString("\n") + "\n")
+            logAppendCount++
+            // 每50条才裁切一次（避免每次都全文件读写的 O(n²) I/O）
+            if (logAppendCount >= 50) {
+                logAppendCount = 0
+                val lines = file.readLines()
+                if (lines.size > 2000) {
+                    file.writeText(lines.takeLast(2000).joinToString("\n") + "\n")
+                }
             }
         } catch (_: Exception) {}
     }
