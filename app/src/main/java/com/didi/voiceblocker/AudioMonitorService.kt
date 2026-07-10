@@ -85,6 +85,13 @@ class AudioMonitorService : Service() {
                 startPlayback()
             } else {
                 positionStableStartTime = 0L
+                // 已静音中但有新音频进来 → 重新检测页面（预约单/实时单会带音频弹窗）
+                if (isMuted) {
+                    ConfigManager.appendLog("AMS", "re-check page on new audio during mute")
+                    pendingPageCheck = true
+                    pageCheckStartTime = System.currentTimeMillis()
+                    pullDidiToForeground()
+                }
             }
         } else {
             // configs 为空 → 音频已停止
