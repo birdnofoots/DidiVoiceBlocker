@@ -310,12 +310,24 @@ class AudioMonitorService : Service() {
 
     private fun pullDidiToForeground() {
         try {
-            val pm = packageManager
-            val intent = pm.getLaunchIntentForPackage("com.sdu.didi.gsui")
-            if (intent != null) {
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(intent)
-                Log.d(TAG, "Pulled DiDi to foreground")
+            // 如果 DiDi 已在前台，跳过 startActivity() — 避免触发页面切换动画
+            val svb = SmartVoiceBlocker.instance
+            val alreadyForeground = try {
+                val root = svb?.rootInActiveWindow
+                val isDidi = root?.packageName?.toString() == "com.sdu.didi.gsui"
+                root?.recycle()
+                isDidi
+            } catch (e: Exception) { false }
+
+            if (!alreadyForeground) {
+                val intent = packageManager.getLaunchIntentForPackage("com.sdu.didi.gsui")
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    startActivity(intent)
+                    Log.d(TAG, "Pulled DiDi to foreground")
+                }
+            } else {
+                ConfigManager.appendLog("AMS", "Didi already foreground, skip pull")
             }
 
             val checkIntent = Intent(this, SmartVoiceBlocker::class.java).apply {

@@ -170,6 +170,22 @@ class SmartVoiceBlocker : AccessibilityService() {
 
     private fun checkCurrentPageAndNotify() {
         ConfigManager.appendLog("SVB", ">>> checkCurrentPageAndNotify")
+
+        // 先尝试立即获取 rootInActiveWindow
+        // 如果 DiDi 已在前台 → 页面已经加载完 → 不需要等 pageScanDelayMs
+        val root = try { rootInActiveWindow } catch (e: Exception) { null }
+        if (root != null && root.packageName?.toString() == DIDI_PKG) {
+            ConfigManager.appendLog("SVB", "root_accessible, immediate scan")
+            handler.post {
+                val start = System.currentTimeMillis()
+                performPageScanAndNotify()
+                ConfigManager.appendLog("SVB", "page_check_total=${System.currentTimeMillis()-start}ms")
+            }
+            return
+        }
+
+        // DiDi 不在前台 → 等页面切换
+        ConfigManager.appendLog("SVB", "root_not_accessible, wait ${ConfigManager.pageScanDelayMs}ms")
         handler.postDelayed({
             val start = System.currentTimeMillis()
             performPageScanAndNotify()
