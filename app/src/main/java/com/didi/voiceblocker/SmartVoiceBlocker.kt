@@ -14,7 +14,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -57,21 +56,6 @@ class SmartVoiceBlocker : AccessibilityService() {
                 checkCurrentPageAndNotify()
             }
         }
-    }
-
-    val logFile by lazy { File(filesDir, "page_captures.log") }
-
-    private fun logPageCapture(texts: List<String>, ids: List<String>,
-                                hasWhitelist: Boolean, hasBlacklist: Boolean) {
-        val ts = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-        val entry = buildString {
-            append("=== $ts ===\n")
-            append("whitelist=$hasWhitelist blacklist=$hasBlacklist\n")
-            append("texts: ${texts.filter { it.length < 50 }.distinct().take(30).joinToString(" | ")}\n")
-            append("ids:   ${ids.distinct().take(30).joinToString(" | ")}\n\n")
-        }
-        logFile.appendText(entry)
-        Log.d(TAG, entry.trim())
     }
 
     private fun scanWithDetails(node: AccessibilityNodeInfo, startTime: Long,
