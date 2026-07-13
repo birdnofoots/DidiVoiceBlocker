@@ -75,7 +75,6 @@ class MainActivity : AppCompatActivity() {
         masterSwitch.isChecked = ConfigManager.enabled
         masterSwitch.setOnCheckedChangeListener { _, checked ->
             ConfigManager.enabled = checked
-            ConfigManager.save()
             updateStatus()
         }
 

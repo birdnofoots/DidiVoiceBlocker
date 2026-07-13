@@ -58,6 +58,12 @@ class AudioMonitorService : Service() {
     private fun handlePlaybackConfigs(configs: List<AudioPlaybackConfiguration>) {
         ConfigManager.init(this)
 
+        // 总开关关闭时:不进入静音/页面检查路径
+        if (!ConfigManager.enabled) {
+            if (isMuted) ensureUnmuted()
+            return
+        }
+
         val usageSet = configs.map { it.audioAttributes.usage }.distinct()
         ConfigManager.appendLog("AMS", "callback: ${configs.size} configs, usages=$usageSet")
 
@@ -157,6 +163,23 @@ class AudioMonitorService : Service() {
         }
     }
 
+    // 总开关响应:用户关闭总开关 = total shutdown. 立即 unmute + stopSelf
+    private val enabledReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ConfigManager.ACTION_ENABLED_CHANGED) {
+                val enabled = ConfigManager.enabled
+                ConfigManager.appendLog("AMS", ">>> ENABLED_CHANGED enabled=$enabled")
+                if (!enabled) {
+                    if (isMuted) ensureUnmuted()
+                    isMuted = false
+                    pendingPageCheck = false
+                    stopSelf()
+                }
+                broadcastState()
+            }
+        }
+    }
+
     private val pageCheckResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == ACTION_CHECK_PAGE_RESULT) {
@@ -184,6 +207,12 @@ class AudioMonitorService : Service() {
         val filter = IntentFilter(ACTION_CHECK_PAGE_RESULT)
         LocalBroadcastManager.getInstance(this).registerReceiver(pageCheckResultReceiver, filter)
 
+        // 总开关变化广播:MainActivity/FloatingBall 翻开关时触发
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            enabledReceiver,
+            IntentFilter(ConfigManager.ACTION_ENABLED_CHANGED)
+        )
+
         Log.d(TAG, "AudioMonitorService started")
     }
 
@@ -203,6 +232,9 @@ class AudioMonitorService : Service() {
         handler.removeCallbacksAndMessages(null)
         try {
             LocalBroadcastManager.getInstance(this).unregisterReceiver(pageCheckResultReceiver)
+        } catch (e: Exception) { }
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(enabledReceiver)
         } catch (e: Exception) { }
         ensureUnmuted()
         super.onDestroy()

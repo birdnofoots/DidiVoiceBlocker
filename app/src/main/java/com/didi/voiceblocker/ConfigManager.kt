@@ -23,6 +23,15 @@ object ConfigManager {
     private var appContext: Context? = null
 
     var enabled: Boolean = true
+        get() = prefs?.getBoolean(KEY_ENABLED, field) ?: field
+        set(value) {
+            field = value
+            prefs?.edit()?.putBoolean(KEY_ENABLED, value)?.apply()
+            appContext?.let {
+                LocalBroadcastManager.getInstance(it)
+                    .sendBroadcast(Intent(ACTION_ENABLED_CHANGED))
+            }
+        }
     var allowTexts: MutableSet<String> = mutableSetOf()
     var allowResourceIds: MutableSet<String> = mutableSetOf()
     var blockHints: MutableSet<String> = mutableSetOf()
@@ -36,6 +45,7 @@ object ConfigManager {
     var pageScanDelayMs: Long = 250L
 
     const val ACTION_AUDIO_PARAMS_UPDATED = "com.didi.voiceblocker.AUDIO_PARAMS_UPDATED"
+    const val ACTION_ENABLED_CHANGED = "com.didi.voiceblocker.ENABLED_CHANGED"
 
     private val defaultAllowTexts = setOf(
         // 预约单 keywords

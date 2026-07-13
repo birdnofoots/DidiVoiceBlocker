@@ -50,6 +50,16 @@ class FloatingBallService : Service() {
     private var isSubMenuOpen = false
     private val handler = Handler(Looper.getMainLooper())
 
+    // 总开关变化:Master switch OFF → 浮球 stopSelf
+    private val enabledReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ConfigManager.ACTION_ENABLED_CHANGED && !ConfigManager.enabled) {
+                Log.d(TAG, "Master switch OFF → stopFloatingBall")
+                stopSelf()
+            }
+        }
+    }
+
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -91,13 +101,22 @@ class FloatingBallService : Service() {
             addAction(SmartVoiceBlocker.ACTION_MUTE_STATE_CHANGED)
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(stateReceiver, filter)
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            enabledReceiver,
+            IntentFilter(ConfigManager.ACTION_ENABLED_CHANGED)
+        )
 
         createFloatingView()
         Log.d(TAG, "Floating ball started")
     }
 
     override fun onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(stateReceiver)
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(stateReceiver)
+        } catch (_: Exception) {}
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(enabledReceiver)
+        } catch (_: Exception) {}
         closeSubMenu()
         floatingView?.let {
             try { windowManager?.removeView(it) } catch (_: Exception) {}
@@ -197,8 +216,8 @@ class FloatingBallService : Service() {
                 closeSubMenu()
             },
             Triple(if (ConfigManager.enabled) "⏸ 关" else "▶ 开", "总开关") {
+                // setter 自动持久化 + 发广播通知 AudioMonitorService stopSelf
                 ConfigManager.enabled = !ConfigManager.enabled
-                ConfigManager.save()
                 updateBallIcon()
                 closeSubMenu()
             },
