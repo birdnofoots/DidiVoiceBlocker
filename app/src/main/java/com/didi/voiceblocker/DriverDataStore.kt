@@ -202,9 +202,8 @@ object DriverDataStore {
         val ctx = appContext ?: return
         val sdf = SimpleDateFormat("yyyy-MM", Locale.US)
         val month = sdf.format(Date())
-        val cal = Calendar.getInstance()
-        val day = cal.get(Calendar.DAY_OF_MONTH)
-        val period = if (day == 1) "上半月" else "下半月"
+        // checkMonthlyReset 调用时 lastResetPeriod 还是旧值(未更新),取刚结束的半月份
+        val period = if (lastResetPeriod == 1) "上半月" else "下半月"
 
         val totalHours = formatHours(morningPeakToday + morningPeakPrev +
             eveningPeakToday + eveningPeakPrev +
