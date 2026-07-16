@@ -61,6 +61,9 @@ object DriverDataStore {
         appContext = context.applicationContext
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         load()
+        // 每次初始化数据都检查日期变化,即使计时器未启动(如 timerStopped=true)
+        // 也保证 startOfDayTotal/todayOrders 正确重置,避免订单数 double-count
+        checkDayReset()
     }
 
     private fun load() {
