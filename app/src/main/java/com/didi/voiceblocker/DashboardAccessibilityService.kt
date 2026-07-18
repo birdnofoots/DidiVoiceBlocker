@@ -148,7 +148,8 @@ class DashboardAccessibilityService : AccessibilityService() {
 
         // 当天首次读订单时,顺便检查出车拍照
         if (!DriverPhotoStore.photoCheckedToday) {
-            mainHandler.postDelayed({ checkDriverPhoto() }, 2000)
+            ConfigManager.appendLog("DASH", "触发出车拍照检查")
+            mainHandler.postDelayed({ checkPhotoStep1() }, 3000)
         }
     }
 
@@ -254,35 +255,61 @@ class DashboardAccessibilityService : AccessibilityService() {
 
     private fun checkPhotoStep1() {
         try {
-            val root = rootInActiveWindow ?: return
+            ConfigManager.appendLog("DASH", "photo step1: 找全部工具")
+            val root = rootInActiveWindow
+            if (root == null) {
+                ConfigManager.appendLog("DASH", "photo step1: root=null, 延迟重试")
+                mainHandler.postDelayed({ checkPhotoStep1() }, 2000)
+                return
+            }
             val btn = findClickableByText(root, "全部工具")
             root.recycle()
-            if (btn == null) return
+            if (btn == null) {
+                ConfigManager.appendLog("DASH", "photo step1: 未找到全部工具按钮")
+                return
+            }
             btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             btn.recycle()
+            ConfigManager.appendLog("DASH", "photo step1: 已点全部工具")
             mainHandler.postDelayed({ checkPhotoStep2() }, 2000)
         } catch (e: Exception) {
             Log.e(TAG, "Photo step1 failed", e)
+            ConfigManager.appendLog("DASH", "photo step1 ERROR: ${e.message}")
         }
     }
 
     private fun checkPhotoStep2() {
         try {
-            val root = rootInActiveWindow ?: return
+            ConfigManager.appendLog("DASH", "photo step2: 找出车拍照")
+            val root = rootInActiveWindow
+            if (root == null) {
+                ConfigManager.appendLog("DASH", "photo step2: root=null")
+                return
+            }
             val btn = findClickableByText(root, "出车拍照")
             root.recycle()
-            if (btn == null) return
+            if (btn == null) {
+                ConfigManager.appendLog("DASH", "photo step2: 未找到出车拍照")
+                return
+            }
             btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             btn.recycle()
+            ConfigManager.appendLog("DASH", "photo step2: 已点出车拍照")
             mainHandler.postDelayed({ checkPhotoStep3() }, 2500)
         } catch (e: Exception) {
             Log.e(TAG, "Photo step2 failed", e)
+            ConfigManager.appendLog("DASH", "photo step2 ERROR: ${e.message}")
         }
     }
 
     private fun checkPhotoStep3() {
         try {
-            val root = rootInActiveWindow ?: return
+            ConfigManager.appendLog("DASH", "photo step3: 读审核中")
+            val root = rootInActiveWindow
+            if (root == null) {
+                ConfigManager.appendLog("DASH", "photo step3: root=null")
+                return
+            }
             val texts = collectAllText(root)
             val completed = texts.contains("审核中")
             root.recycle()
@@ -291,11 +318,11 @@ class DashboardAccessibilityService : AccessibilityService() {
             Log.d(TAG, "Photo check: completed=$completed")
             ConfigManager.appendLog("DASH", "出车拍照=${if (completed) "已拍照" else "未完成"}")
 
-            // 返回首页
             performGlobalAction(GLOBAL_ACTION_BACK)
             mainHandler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 800)
         } catch (e: Exception) {
             Log.e(TAG, "Photo step3 failed", e)
+            ConfigManager.appendLog("DASH", "photo step3 ERROR: ${e.message}")
         }
     }
 
@@ -303,6 +330,12 @@ class DashboardAccessibilityService : AccessibilityService() {
         val nodes = node.findAccessibilityNodeInfosByText(text)
         for (n in nodes) {
             if (n.isClickable) return n
+            // "全部工具"等文字本身不 clickable,其父容器才可点
+            val parent = n.parent
+            if (parent != null && parent.isClickable) {
+                n.recycle()
+                return parent
+            }
             n.recycle()
         }
         return null
