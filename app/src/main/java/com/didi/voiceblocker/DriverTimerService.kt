@@ -54,6 +54,10 @@ class DriverTimerService : Service() {
     }
 
     private fun tick() {
+        // 收车检测: DIDI 进程不存在 → 自动暂停,恢复后自动继续
+        if (!DriverDataStore.timerStopped) {
+            DriverDataStore.checkAndSyncDidiRunning()
+        }
         if (DriverDataStore.manualPaused) return
         if (DriverDataStore.timerStopped) return
 

@@ -1,5 +1,6 @@
 package com.didi.voiceblocker
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import java.io.File
@@ -54,6 +55,9 @@ object DriverDataStore {
     var manualPaused: Boolean = false
         private set
     var timerStopped: Boolean = false
+        private set
+    // 收车自动暂停: DIDI 进程不存在时置 true,恢复后自动清除
+    var autoPausedByDidiStop: Boolean = false
         private set
     private var lastResetPeriod: Int = 0
 
@@ -128,6 +132,29 @@ object DriverDataStore {
 
     fun setTimerStopped(stopped: Boolean) {
         timerStopped = stopped
+        save()
+    }
+
+    // 检查 DiDi 进程是否在运行(收车检测, AudioMonitorService 也复用)
+    fun isDidiProcessRunning(): Boolean {
+        val ctx = appContext ?: return false
+        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val processes = am.runningAppProcesses ?: return false
+        return processes.any { it.processName == "com.sdu.didi.gsui" }
+    }
+
+    // 收车自动暂停/出车恢复
+    fun checkAndSyncDidiRunning() {
+        val didiRunning = isDidiProcessRunning()
+        if (!didiRunning && !timerStopped && !manualPaused) {
+            // DIDI 不在了 → 自动暂停
+            manualPaused = true
+            autoPausedByDidiStop = true
+        } else if (didiRunning && autoPausedByDidiStop) {
+            // DIDI 恢复了 → 清除自动暂停
+            manualPaused = false
+            autoPausedByDidiStop = false
+        }
         save()
     }
 
