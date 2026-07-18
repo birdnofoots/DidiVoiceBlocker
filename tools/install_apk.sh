@@ -2,10 +2,10 @@
 # install_apk.sh — 推送 APK 到华为手机(自动悬浮窗 + 弹窗处理 + 密码输入)
 # 
 # 流程:
-#   1. 检查/强制 DIDI 变成悬浮窗(避免安装过程被 DiDi 播报打断)
+#   1. 临时关闭总开关(防止 VoiceBlocker 在安装中拉 DIDI 前台)
 #   2. adb install 触发华为安装弹窗
 #   3. 自动点击"继续安装" → 勾选复选框 → 输入锁屏密码
-#   4. 验证安装完成
+#   4. 验证安装完成 → 恢复总开关状态
 #
 # 依赖: mate60 helper (ADB 连接) / uiautomator dump (弹窗元素定位)
 # 环境变量:
@@ -24,58 +24,26 @@ step() { echo -e "\033[36m[$1]\033[0m $2"; }
 
 ADB="/usr/bin/adb -s $SERIAL"
 
-# ── Step 1: 让 DIDI 变成悬浮窗 ────────────────────────────
-step "1/4" "检查/切换到悬浮窗"
+# ── Step 1: 保存并关闭总开关(防止 VoiceBlocker 安装中拉 DIDI) ──
+step "1/4" "临时关闭总开关"
 
-DIDI_FOCUS=$($ADB shell "dumpsys window 2>/dev/null | grep mCurrentFocus" | head -1)
-DIDI_TASK_MODE=$($ADB shell "dumpsys activity activities 2>/dev/null | grep -A1 'com.sdu.didi.gsui' | grep mode=" | head -1)
+VB_ENABLED="true"
+ENABLED_XML_PATH="/data/user/0/com.didi.voiceblocker/shared_prefs/blocker_config.xml"
+CUR_ENABLED=$($ADB shell "run-as com.didi.voiceblocker cat shared_prefs/blocker_config.xml 2>/dev/null | grep 'name=\"enabled\"' | grep -oE 'value=\"(true|false)\"' | head -1 | grep -oE 'true|false'" 2>/dev/null || echo "true")
+VB_ENABLED="$CUR_ENABLED"
+echo "  当前总开关: $VB_ENABLED"
 
-if echo "$DIDI_TASK_MODE" | grep -q "freeform"; then
-    ok "DIDI 已在悬浮窗模式"
-elif echo "$DIDI_FOCUS" | grep -q "com.sdu.didi.gsui"; then
-    warn "DIDI 全屏 → 发送 HOME 最小化"
-    $ADB shell input keyevent HOME
-    sleep 1
-
-    # 重新拉回并设为 freeform (华为特有: 从最近任务里点悬浮窗图标)
-    # 1) 打开最近任务
-    $ADB shell input keyevent APP_SWITCH
-    sleep 1
-
-    # 2) 点 DIDI 卡片的悬浮窗图标 (Huawei 最近任务页每个卡片右上角有图标)
-    #    坐标需要 dump 动态取
-    $ADB shell uiautomator dump /sdcard/u.xml 2>/dev/null
-    $ADB pull /sdcard/u.xml /tmp/recent.xml >/dev/null 2>&1
-    $ADB shell rm /sdcard/u.xml 2>/dev/null
-
-    # 找 DIDI 卡片的悬浮窗按钮(通常 content-desc="浮窗" 或 text="浮窗")
-    FLOAT_BTN=$(python3 -c "
-import re
-xml = open('/tmp/recent.xml').read()
-for m in re.finditer(r'<node\b[^>]*?>', xml):
-    s = m.group(0)
-    text = re.search(r'\btext=\"([^\"]*)\"', s)
-    desc = re.search(r'\bcontent-desc=\"([^\"]+)\"', s)
-    label = (text.group(1) if text else '') or (desc.group(1) if desc else '')
-    if '浮窗' in label or '悬浮' in label or 'freeform' in label.lower():
-        b = re.search(r'\bbounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"', s)
-        if b:
-            x1,y1,x2,y2 = map(int,b.groups())
-            print(f'{(x1+x2)//2} {(y1+y2)//2}')
-            break
-")
-    if [ -n "$FLOAT_BTN" ]; then
-        $ADB shell input tap $FLOAT_BTN
-        sleep 1
-        ok "DIDI 已切换为悬浮窗"
-    else
-        # fallback: 直接点 DIDI 卡片(回到全屏),后续安装时按 HOME
-        warn "未找到悬浮窗按钮, 回 HOME 最小化"
-        $ADB shell input keyevent HOME
-    fi
-else
-    ok "DIDI 不在前台,无需切换"
+if [ "$VB_ENABLED" = "true" ]; then
+    echo "  关闭总开关..."
+    $ADB shell "run-as com.didi.voiceblocker sed -i 's/value=\"true\"/value=\"false\"/' shared_prefs/blocker_config.xml" 2>/dev/null
+    sleep 0.3
+    CHECK=$($ADB shell "run-as com.didi.voiceblocker cat shared_prefs/blocker_config.xml 2>/dev/null | grep 'name=\"enabled\"' | grep -oE 'value=\"(true|false)\"' | head -1")
+    echo "  验证: $CHECK"
 fi
+
+# 发送 HOME 让 VoiceBlocker 在后台(不影响 PackageInstaller 前台)
+$ADB shell input keyevent HOME
+sleep 1
 
 # ── Step 2: 推送安装 ──────────────────────────────────────
 step "2/4" "推送 APK 安装"
@@ -211,13 +179,22 @@ else
     warn "未找到密码输入框(可能无需密码)"
 fi
 
-# ── Step 4: 验证 ──────────────────────────────────────────
-step "4/4" "验证安装"
+# ── Step 4: 验证 + 恢复总开关 ─────────────────────────────
+step "4/4" "验证安装 + 恢复总开关"
 
 # 等 install 进程退出
 wait $INSTALL_PID 2>/dev/null || true
 
 LAST=$($ADB shell "dumpsys package com.didi.voiceblocker 2>/dev/null | grep lastUpdateTime" | tr -d '\r')
 echo "  $LAST"
+
+# 恢复总开关
+if [ "$VB_ENABLED" = "true" ]; then
+    echo "  恢复总开关为 $VB_ENABLED"
+    $ADB shell "run-as com.didi.voiceblocker sed -i 's/value=\"false\"/value=\"true\"/' shared_prefs/blocker_config.xml" 2>/dev/null
+    CHECK=$($ADB shell "run-as com.didi.voiceblocker cat shared_prefs/blocker_config.xml 2>/dev/null | grep 'name=\"enabled\"' | grep -oE 'value=\"(true|false)\"' | head -1")
+    echo "  验证: $CHECK"
+fi
+
 echo ""
 ok "安装完成 - APK: $APK"
