@@ -70,7 +70,6 @@ class DashboardOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         DriverDataStore.init(this)
-        DriverPhotoStore.init(this)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
 
@@ -374,7 +373,8 @@ class DashboardOverlayService : Service() {
     }
 
     private fun updatePhotoStatus() {
-        tvPhotoStatus?.text = if (DriverPhotoStore.photoCompleted) "✅ 今天拍过" else "❓ 今天拍照了吗?"
+        // 纯文字提醒: 每天凌晨显示一次,提醒用户做拍照检查
+        tvPhotoStatus?.text = "今天拍照了吗?"
     }
 
     private fun createNotificationChannel() {

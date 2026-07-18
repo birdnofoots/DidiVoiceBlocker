@@ -44,7 +44,6 @@ class DashboardAccessibilityService : AccessibilityService() {
         LocalBroadcastManager.getInstance(this).registerReceiver(
             refreshReceiver, IntentFilter(ACTION_REFRESH_ORDERS)
         )
-        DriverPhotoStore.init(this)
         Log.d(TAG, "DashboardAccessibilityService connected")
     }
 
