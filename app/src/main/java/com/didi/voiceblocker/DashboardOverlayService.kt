@@ -43,6 +43,7 @@ class DashboardOverlayService : Service() {
     private val handler = Handler(Looper.getMainLooper())
 
     private var tvOrders: TextView? = null
+    private var tvPanelTitle: TextView? = null
     private var tvMorning: TextView? = null
     private var tvEvening: TextView? = null
     private var tvNight: TextView? = null
@@ -129,6 +130,7 @@ class DashboardOverlayService : Service() {
     private fun setupViews() {
         val view = overlayView ?: return
         tvOrders = view.findViewById(R.id.tvOrders)
+        tvPanelTitle = view.findViewById(R.id.tvPanelTitle)
         tvMorning = view.findViewById(R.id.tvMorning)
         tvEvening = view.findViewById(R.id.tvEvening)
         tvNight = view.findViewById(R.id.tvNight)
@@ -210,6 +212,8 @@ class DashboardOverlayService : Service() {
         if (!DriverDataStore.timerStopped) {
             startService(Intent(this, DriverTimerService::class.java))
         }
+
+        updatePanelTitle()
     }
 
     private fun minimizePanel() {
@@ -326,6 +330,7 @@ class DashboardOverlayService : Service() {
     private fun refreshDisplay() {
         if (overlayView == null) return
         handler.post {
+            updatePanelTitle()
             tvOrders?.text = "订单数:     ${DriverDataStore.getDisplayOrder()}"
             tvMorning?.text = "早高峰总时长: ${DriverDataStore.getDisplayPeak("morning")}"
             tvEvening?.text = "晚高峰总时长: ${DriverDataStore.getDisplayPeak("evening")}"
@@ -348,6 +353,14 @@ class DashboardOverlayService : Service() {
                 btn.setBackgroundColor(0xFFFF9800.toInt())
             }
         }
+    }
+
+    private fun updatePanelTitle() {
+        val cal = java.util.Calendar.getInstance()
+        val month = cal.get(java.util.Calendar.MONTH) + 1
+        val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+        val half = if (day <= 15) "上半月" else "下半月"
+        tvPanelTitle?.text = "📊 数据面板 - ${month}月${half}"
     }
 
     private fun createNotificationChannel() {
