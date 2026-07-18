@@ -22,6 +22,11 @@ class DashboardAccessibilityService : AccessibilityService() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    // 自动提取订单数: 检测 DIDI 回到首页时,仅在数量变化时更新
+    private var lastOrderCount = -1
+    private var lastAutoReadTime = 0L
+    private val AUTO_READ_DEBOUNCE_MS = 3000L
+
     private val refreshReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             Thread { refreshOrders() }.start()
@@ -42,7 +47,27 @@ class DashboardAccessibilityService : AccessibilityService() {
         Log.d(TAG, "DashboardAccessibilityService connected")
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+        // 仅首页切换事件
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        // 防抖
+        val now = System.currentTimeMillis()
+        if (now - lastAutoReadTime < AUTO_READ_DEBOUNCE_MS) return
+        lastAutoReadTime = now
+
+        // 检查是否在 DIDI 主页
+        if (!isOnDidiMainScreen()) return
+
+        // 读订单数,仅变化时更新持久化
+        val count = readOrderCount()
+        if (count >= 0 && count != lastOrderCount) {
+            lastOrderCount = count
+            DriverDataStore.updateOrderCount(count)
+            Log.d(TAG, "Auto order update: $count")
+            ConfigManager.appendLog("DASH", "自动更新订单数=$count")
+        }
+    }
 
     override fun onInterrupt() {}
 
@@ -106,6 +131,7 @@ class DashboardAccessibilityService : AccessibilityService() {
 
     private fun finishWithCount(count: Int) {
         if (count >= 0) {
+            lastOrderCount = count
             DriverDataStore.updateOrderCount(count)
             Log.d(TAG, "Orders updated: $count")
             ConfigManager.appendLog("DASH", "订单数=$count")
