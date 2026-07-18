@@ -51,14 +51,18 @@ print('true' if '审核中' in texts else 'false')
 ")
 echo "[check_photo] 审核中=$COMPLETED"
 
-# 5) 写 prefs + 发广播
-if [ "$COMPLETED" = "true" ]; then
-    $ADB shell "run-as com.didi.voiceblocker sed -i 's/value=\"false\"/value=\"true\"/' shared_prefs/driver_photo.xml" 2>/dev/null
-fi
-# 确保 checked_day 写入(当天)
-DAY=$(date +%j)
-$ADB shell "run-as com.didi.voiceblocker sed -i '/photo_checked_day/d' shared_prefs/driver_photo.xml" 2>/dev/null
-$ADB shell "run-as com.didi.voiceblocker sh -c 'echo \"    <int name=\\\"photo_checked_day\\\" value=\\\"$DAY\\\" />\" >> shared_prefs/driver_photo.xml'" 2>/dev/null
+# 5) 写 prefs(用 push + run-as cp,避免 shell echo 破坏 XML)
+PHOTO_VAL="$COMPLETED"
+DAY_NUM=$(date +%j)
+cat > /tmp/photo_prefs.xml << XML
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<map>
+    <boolean name="photo_completed" value="$PHOTO_VAL" />
+    <int name="photo_checked_day" value="$DAY_NUM" />
+</map>
+XML
+$ADB push /tmp/photo_prefs.xml /data/local/tmp/photo_prefs.xml >/dev/null 2>&1
+$ADB shell "run-as com.didi.voiceblocker cp /data/local/tmp/photo_prefs.xml shared_prefs/driver_photo.xml" 2>/dev/null
 
 # 发送刷新广播
 $ADB shell "am broadcast -a com.didi.voiceblocker.REFRESH_DISPLAY -p com.didi.voiceblocker" 2>/dev/null | tail -1
