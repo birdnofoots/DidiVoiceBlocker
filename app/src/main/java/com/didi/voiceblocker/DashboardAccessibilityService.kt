@@ -249,48 +249,53 @@ class DashboardAccessibilityService : AccessibilityService() {
     // 导航到全部工具 → 出车拍照 → 读"审核中" → 返回
     private fun checkDriverPhoto() {
         if (DriverPhotoStore.photoCheckedToday) return
+        checkPhotoStep1()
+    }
 
+    private fun checkPhotoStep1() {
         try {
-            // Step 1: 点"全部工具"
             val root = rootInActiveWindow ?: return
-            var btn = findClickableByText(root, "全部工具")
-            if (btn == null) {
-                root.recycle()
-                return
-            }
-            btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            btn.recycle()
+            val btn = findClickableByText(root, "全部工具")
             root.recycle()
-            Thread.sleep(1500)
-
-            // Step 2: 点"出车拍照"
-            val root2 = rootInActiveWindow ?: return
-            btn = findClickableByText(root2, "出车拍照")
-            if (btn == null) {
-                root2.recycle()
-                return
-            }
+            if (btn == null) return
             btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             btn.recycle()
-            root2.recycle()
-            Thread.sleep(2000)
+            mainHandler.postDelayed({ checkPhotoStep2() }, 2000)
+        } catch (e: Exception) {
+            Log.e(TAG, "Photo step1 failed", e)
+        }
+    }
 
-            // Step 3: 读页面是否有"审核中"
-            val root3 = rootInActiveWindow ?: return
-            val texts = collectAllText(root3)
+    private fun checkPhotoStep2() {
+        try {
+            val root = rootInActiveWindow ?: return
+            val btn = findClickableByText(root, "出车拍照")
+            root.recycle()
+            if (btn == null) return
+            btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            btn.recycle()
+            mainHandler.postDelayed({ checkPhotoStep3() }, 2500)
+        } catch (e: Exception) {
+            Log.e(TAG, "Photo step2 failed", e)
+        }
+    }
+
+    private fun checkPhotoStep3() {
+        try {
+            val root = rootInActiveWindow ?: return
+            val texts = collectAllText(root)
             val completed = texts.contains("审核中")
-            root3.recycle()
+            root.recycle()
 
             DriverPhotoStore.setPhotoCompleted(completed)
             Log.d(TAG, "Photo check: completed=$completed")
             ConfigManager.appendLog("DASH", "出车拍照=${if (completed) "已拍照" else "未完成"}")
 
-            // Step 4: 返回
+            // 返回首页
             performGlobalAction(GLOBAL_ACTION_BACK)
-            Thread.sleep(800)
-            performGlobalAction(GLOBAL_ACTION_BACK)
+            mainHandler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 800)
         } catch (e: Exception) {
-            Log.e(TAG, "Photo check failed", e)
+            Log.e(TAG, "Photo step3 failed", e)
         }
     }
 
