@@ -197,8 +197,20 @@ if [ "$VB_ENABLED" = "true" ]; then
 fi
 
 # 安装后重新绑定无障碍服务(install 过程可能解绑)
+# 注意: 保留其他 app 已启用的服务,不覆盖整个列表
 echo "  重绑无障碍服务..."
-$ADB shell "settings put secure enabled_accessibility_services com.didi.voiceblocker/.DashboardAccessibilityService:com.didi.voiceblocker/.SmartVoiceBlocker" 2>/dev/null
+CUR_SVC=$($ADB shell "settings get secure enabled_accessibility_services" 2>/dev/null | tr -d '\r\n')
+DASH="com.didi.voiceblocker/.DashboardAccessibilityService"
+SVB="com.didi.voiceblocker/.SmartVoiceBlocker"
+NEW_SVC="$CUR_SVC"
+# 追加缺失的服务
+if ! echo "$CUR_SVC" | grep -q "$DASH"; then
+    NEW_SVC="${NEW_SVC}:${DASH}"
+fi
+if ! echo "$CUR_SVC" | grep -q "$SVB"; then
+    NEW_SVC="${NEW_SVC}:${SVB}"
+fi
+$ADB shell "settings put secure enabled_accessibility_services '$NEW_SVC'" 2>/dev/null
 sleep 1
 
 echo ""
