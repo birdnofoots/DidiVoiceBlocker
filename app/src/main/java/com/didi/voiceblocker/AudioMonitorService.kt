@@ -241,12 +241,6 @@ class AudioMonitorService : Service() {
     }
 
     private fun startPlayback() {
-        // 收车状态:如果 DIDI 根本没在跑(进程不存在),不拉前台,不静音
-        if (!isDidiProcessRunning()) {
-            ConfigManager.appendLog("AMS", ">>> SKIP: DiDi not running (收车状态)")
-            return
-        }
-
         state = State.PLAYING
         playbackStartTime = System.currentTimeMillis()
         lastActivityTime = System.currentTimeMillis()
@@ -355,12 +349,6 @@ class AudioMonitorService : Service() {
     }
 
     private fun pullDidiToForeground() {
-        // 收车状态: DiDi 根本没在跑,不拉
-        if (!isDidiProcessRunning()) {
-            ConfigManager.appendLog("AMS", ">>> SKIP pull: DiDi not running")
-            return
-        }
-
         try {
             // 如果 DiDi 已在前台，跳过 startActivity() — 避免触发页面切换动画
             val svb = SmartVoiceBlocker.instance
@@ -455,10 +443,4 @@ class AudioMonitorService : Service() {
             .build()
     }
 
-    // 检查 DiDi 进程是否在运行(收车状态下返回 false)
-    private fun isDidiProcessRunning(): Boolean {
-        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val processes = am.runningAppProcesses ?: return false
-        return processes.any { it.processName == "com.sdu.didi.gsui" }
-    }
 }
