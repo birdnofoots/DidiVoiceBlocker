@@ -144,6 +144,11 @@ class DashboardAccessibilityService : AccessibilityService() {
         } else {
             ConfigManager.appendLog("DASH", "读取接单数失败")
         }
+
+        // 当天首次读订单时,顺便检查出车拍照
+        if (!DriverPhotoStore.photoCheckedToday) {
+            mainHandler.postDelayed({ checkDriverPhoto() }, 2000)
+        }
     }
 
     private fun isOnDidiMainScreen(): Boolean {
@@ -238,5 +243,62 @@ class DashboardAccessibilityService : AccessibilityService() {
             val child = try { node.getChild(i) } catch (e: Exception) { null } ?: continue
             try { collectTextRecursive(child, sb) } finally { child.recycle() }
         }
+    }
+
+    // 导航到全部工具 → 出车拍照 → 读"审核中" → 返回
+    private fun checkDriverPhoto() {
+        if (DriverPhotoStore.photoCheckedToday) return
+
+        try {
+            // Step 1: 点"全部工具"
+            val root = rootInActiveWindow ?: return
+            var btn = findClickableByText(root, "全部工具")
+            if (btn == null) {
+                root.recycle()
+                return
+            }
+            btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            btn.recycle()
+            root.recycle()
+            Thread.sleep(1500)
+
+            // Step 2: 点"出车拍照"
+            val root2 = rootInActiveWindow ?: return
+            btn = findClickableByText(root2, "出车拍照")
+            if (btn == null) {
+                root2.recycle()
+                return
+            }
+            btn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            btn.recycle()
+            root2.recycle()
+            Thread.sleep(2000)
+
+            // Step 3: 读页面是否有"审核中"
+            val root3 = rootInActiveWindow ?: return
+            val texts = collectAllText(root3)
+            val completed = texts.contains("审核中")
+            root3.recycle()
+
+            DriverPhotoStore.setPhotoCompleted(completed)
+            Log.d(TAG, "Photo check: completed=$completed")
+            ConfigManager.appendLog("DASH", "出车拍照=${if (completed) "已拍照" else "未完成"}")
+
+            // Step 4: 返回
+            performGlobalAction(GLOBAL_ACTION_BACK)
+            Thread.sleep(800)
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        } catch (e: Exception) {
+            Log.e(TAG, "Photo check failed", e)
+        }
+    }
+
+    private fun findClickableByText(node: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
+        val nodes = node.findAccessibilityNodeInfosByText(text)
+        for (n in nodes) {
+            if (n.isClickable) return n
+            n.recycle()
+        }
+        return null
     }
 }

@@ -55,15 +55,32 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvOrders"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="订单数:     0 = 0 + 0"
-            android:textColor="#FFFFEB3B"
-            android:textSize="13sp"
-            android:fontFamily="monospace"
-            android:paddingTop="4dp" />
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvOrders"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="订单数:     0 = 0 + 0"
+                android:textColor="#FFFFEB3B"
+                android:textSize="13sp"
+                android:fontFamily="monospace"
+                android:paddingTop="4dp" />
+
+            <TextView
+                android:id="@+id/tvPhotoStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textColor="#FF4CAF50"
+                android:textSize="16sp"
+                android:paddingEnd="8dp"
+                android:gravity="end|center_vertical" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvMorning"
