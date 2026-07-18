@@ -1,0 +1,32 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "primary",
+      "value": "#2196F3"
+    },
+    {
+      "name": "muted",
+      "value": "#9E9E9E"
+    },
+    {
+      "name": "allowed",
+      "value": "#4CAF50"
+    },
+    {
+      "name": "playing",
+      "value": "#2196F3"
+    },
+    {
+      "name": "disabled",
+      "value": "#F44336"
+    },
+    {
+      "name": "panel_background",
+      "value": "#E6222222"
+    }
+  ]
+}

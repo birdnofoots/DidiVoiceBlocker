@@ -1,0 +1,101 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "MainEntry",
+    "deviceTypes": [
+      "phone"
+    ],
+    "pages": "$profile:main_pages",
+    "abilities": [
+      {
+        "name": "MainEntry",
+        "srcEntry": "./ets/entryability/MainEntry.ets",
+        "description": "$string:main_entry_desc",
+        "icon": "$media:layered_image",
+        "label": "$string:entry_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+        ]
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "SmartVoiceBlockerAbility",
+        "srcEntry": "./ets/services/SmartVoiceBlockerAbility.ets",
+        "type": "accessibility",
+        "description": "$string:svb_ability_desc"
+      },
+      {
+        "name": "DashboardAccessibilityAbility",
+        "srcEntry": "./ets/services/DashboardAccessibilityAbility.ets",
+        "type": "accessibility",
+        "description": "$string:dash_a11y_ability_desc"
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.ACCESSIBILITY_ABILITY",
+        "reason": "$string:perm_accessibility_reason",
+        "usedScene": {
+          "abilities": [
+            "SmartVoiceBlockerAbility",
+            "DashboardAccessibilityAbility"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING",
+        "reason": "$string:perm_bg_reason",
+        "usedScene": {
+          "abilities": [
+            "MainEntry"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.WINDOW_TOP_MOST",
+        "reason": "$string:perm_window_reason",
+        "usedScene": {
+          "abilities": [
+            "MainEntry"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.GET_BUNDLE_INFO",
+        "reason": "$string:perm_bundle_reason",
+        "usedScene": {
+          "abilities": [
+            "MainEntry"
+          ],
+          "when": "always"
+        }
+      },
+      {
+        "name": "ohos.permission.NOTIFICATION_CONTROLLER",
+        "reason": "$string:perm_notif_reason",
+        "usedScene": {
+          "abilities": [
+            "MainEntry"
+          ],
+          "when": "always"
+        }
+      }
+    ]
+  }
+}

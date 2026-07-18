@@ -10,3 +10,15 @@
 .cxx
 local.properties
 *.apk
+
+# HarmonyOS
+harmonyos/.idea/
+harmonyos/**/.idea/
+harmonyos/**/build/
+harmonyos/**/.cxx/
+harmonyos/**/node_modules/
+harmonyos/**/*.hap
+harmonyos/**/*.hsp
+harmonyos/**/local.properties
+harmonyos/**/oh_modules/
+

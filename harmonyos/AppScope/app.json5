@@ -1,0 +1,16 @@
+{
+  "app": {
+    "bundleName": "com.didi.voiceblocker.hmos",
+    "vendor": "didi-voice-blocker",
+    "versionCode": 1,
+    "versionName": "1.0.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name",
+    "description": "$string:app_desc",
+    "targetBundleName": "",
+    "minAPIVersion": 9,
+    "targetAPIVersion": 20,
+    "apiReleaseType": "Release",
+    "debug": false
+  }
+}

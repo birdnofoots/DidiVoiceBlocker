@@ -1,0 +1,76 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "滴滴静音器 entry 模块"
+    },
+    {
+      "name": "main_entry_desc",
+      "value": "滴滴静音器主入口"
+    },
+    {
+      "name": "entry_label",
+      "value": "滴滴静音器"
+    },
+    {
+      "name": "svb_ability_desc",
+      "value": "滴滴页面检测无障碍服务"
+    },
+    {
+      "name": "dash_a11y_ability_desc",
+      "value": "滴滴接单数读取无障碍服务"
+    },
+    {
+      "name": "perm_accessibility_reason",
+      "value": "需要无障碍权限读取滴滴页面文本以判断预约单/实时单"
+    },
+    {
+      "name": "perm_bg_reason",
+      "value": "需要后台运行权限持续监控音频播报"
+    },
+    {
+      "name": "perm_window_reason",
+      "value": "需要悬浮窗权限显示悬浮球和数据面板"
+    },
+    {
+      "name": "perm_bundle_reason",
+      "value": "需要获取应用信息以识别滴滴进程"
+    },
+    {
+      "name": "perm_notif_reason",
+      "value": "需要通知权限显示前台服务通知"
+    },
+    {
+      "name": "tab_whitelist",
+      "value": "白名单"
+    },
+    {
+      "name": "tab_records",
+      "value": "记录"
+    },
+    {
+      "name": "tab_status",
+      "value": "状态"
+    },
+    {
+      "name": "enable_service",
+      "value": "启用静音服务"
+    },
+    {
+      "name": "open_accessibility",
+      "value": "去开启无障碍"
+    },
+    {
+      "name": "open_overlay",
+      "value": "去开启悬浮窗"
+    },
+    {
+      "name": "start_floating_ball",
+      "value": "启动悬浮球"
+    },
+    {
+      "name": "stop_floating_ball",
+      "value": "停止悬浮球"
+    }
+  ]
+}

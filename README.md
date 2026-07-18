@@ -73,10 +73,75 @@ echo "sdk.dir=/path/to/android-sdk" > local.properties
 # 产物：app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## 鸿蒙 6.0（HarmonyOS NEXT）适配版
+
+本仓库同时维护一个面向 **HarmonyOS NEXT / 纯血鸿蒙 6.0** 的 ArkTS 工程，位于 `harmonyos/` 目录。
+
+### 当前状态
+- Phase 1 MVP 已完成：工程搭建、音频检测、全局媒体静音、无障碍页面扫描放行、主界面与基础设置。
+- 后续待实现：悬浮球（`FloatingBallAbility` / `SubWindow`）、数据面板、高峰计时、开机自启替代方案。
+
+### 鸿蒙版与 Android 版的差异
+| 维度 | Android 版 | 鸿蒙版 |
+|------|------------|--------|
+| 开发语言 | Kotlin | ArkTS |
+| 应用模型 | Android Service | Stage 模型 + ExtensionAbility |
+| 音频检测 | `AudioPlaybackCallback` | `audioManager.on('audioRendererChange')` |
+| 静音方式 | `setStreamMute(STREAM_MUSIC)` | `audioManager.setVolume(MEDIA, 0)`（全局媒体音量） |
+| 无障碍 | `AccessibilityService` | `AccessibilityExtensionAbility` |
+| 悬浮窗 | `WindowManager.addView` | `WindowExtensionAbility` / `SubWindow` |
+| 进程内通信 | `LocalBroadcastManager` | `@ohos.events.emitter` |
+| 持久化 | `SharedPreferences` | `@ohos.data.preferences` |
+
+### 鸿蒙版关键限制
+1. **无 `viewIdResourceName`**：页面扫描只能匹配文本/描述，原 `allowResourceIds` 列表在鸿蒙端基本失效。
+2. **静音影响全局**：当前通过把系统媒体音量置 0 实现静音，会同时静音其他媒体 App。如需定向静音，需滴滴接入 `AVSession` 或系统级能力，尚不可行。
+3. **无开机自启**：HarmonyOS NEXT 限制公开开机广播，需用户手动启动服务并保持前台通知/悬浮球保活。
+
+### 鸿蒙版构建
+
+环境：DevEco Studio 5.0+ 或 hvigor 命令行，HarmonyOS SDK API 9+（目标 6.0.0/20）。
+
+```bash
+cd harmonyos
+# 安装依赖
+ohpm install
+# 构建 HAP
+hvigorw assembleHap
+# 产物：entry/build/default/outputs/default/entry-default-signed.hap
+```
+
+### 鸿蒙版运行前准备
+1. 安装 HAP 后，前往 **设置 > 辅助功能 > 无障碍 > 滴滴静音器**，开启无障碍服务。
+2. 前往 **设置 > 应用 > 滴滴静音器 > 权限管理**，授予悬浮窗、后台运行、通知等权限。
+3. 打开应用，点击"启动音频监控服务"。
+
+### 鸿蒙版项目结构
+
+```
+harmonyos/entry/src/main/ets/
+├── entryability/MainEntry.ets
+├── pages/
+│   ├── Index.ets
+│   ├── WhitelistPage.ets
+│   ├── RecordsPage.ets
+│   └── StatusPage.ets
+├── services/
+│   ├── AudioMonitorService.ets         # 音频检测 + 静音控制
+│   ├── SmartVoiceBlockerAbility.ets    # 无障碍页面扫描放行
+│   └── DashboardAccessibilityAbility.ets # 读接单数（占位）
+├── utils/
+│   ├── ConfigStore.ets                 # preferences 配置
+│   ├── EventBus.ets                    # emitter 事件总线
+│   └── Logger.ets                      # 日志
+└── model/PlaybackRecord.ets            # 播报记录模型
+```
+
 ## 文档
 
 - [docs/SPEC.md](docs/SPEC.md) — 完整开发规格说明书（各模块、配置、数据结构）
 - [docs/audio-flow.md](docs/audio-flow.md) — 音频检测与放行决策流程、可调参数详解
+- [鸿蒙 6.0 适配计划](.qoder/plans/tough-harbor-drake.md) — 由 Qoder 生成的详细实施计划
 
 ## 免责声明
 

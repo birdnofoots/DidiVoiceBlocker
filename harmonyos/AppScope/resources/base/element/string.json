@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "滴滴静音器"
+    },
+    {
+      "name": "app_desc",
+      "value": "滴滴车主语音播报智能静音助手"
+    }
+  ]
+}
