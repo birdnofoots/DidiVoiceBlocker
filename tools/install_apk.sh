@@ -38,19 +38,7 @@ if [ "$VB_ENABLED" = "true" ]; then
     $ADB shell "run-as com.didi.voiceblocker sed -i 's/value=\"true\"/value=\"false\"/' shared_prefs/blocker_config.xml" 2>/dev/null
     sleep 0.3
     CHECK=$($ADB shell "run-as com.didi.voiceblocker cat shared_prefs/blocker_config.xml 2>/dev/null | grep 'name=\"enabled\"' | grep -oE 'value=\"(true|false)\"' | head -1")
-    echo "  验证: $CHECK"
-    
-    # sed 只改了文件,运行中的进程内存里 enabled 仍为 true
-    # kill -9 进程让 OS 自动重启,重启后读 prefs 得 enabled=false → 服务不启
-    echo "  重启 VoiceBlocker 进程使 enabled 生效..."
-    VB_PID=$($ADB shell "pidof com.didi.voiceblocker" 2>/dev/null | tr -d '\r\n')
-    OLD_VB_PID="$VB_PID"
-    if [ -n "$VB_PID" ]; then
-        $ADB shell "kill -9 $VB_PID" 2>/dev/null
-        sleep 1
-        NEW_PID=$($ADB shell "pidof com.didi.voiceblocker" 2>/dev/null | tr -d '\r\n')
-        echo "  旧 PID: $VB_PID → 新 PID: ${NEW_PID:-未启动}"
-    fi
+    echo "  验证: $CHECK (安装完成后 app 会重启,读到 false 自动不启服务)"
 fi
 
 # 发送 HOME 让 VoiceBlocker 在后台(不影响 PackageInstaller 前台)
@@ -206,13 +194,6 @@ if [ "$VB_ENABLED" = "true" ]; then
     $ADB shell "run-as com.didi.voiceblocker sed -i 's/value=\"false\"/value=\"true\"/' shared_prefs/blocker_config.xml" 2>/dev/null
     CHECK=$($ADB shell "run-as com.didi.voiceblocker cat shared_prefs/blocker_config.xml 2>/dev/null | grep 'name=\"enabled\"' | grep -oE 'value=\"(true|false)\"' | head -1")
     echo "  验证: $CHECK"
-    
-    # 重新 kill 进程让 OS 重启,重启后读 prefs 得 enabled=true
-    VB_PID=$($ADB shell "pidof com.didi.voiceblocker" 2>/dev/null | tr -d '\r\n')
-    if [ -n "$VB_PID" ] && [ "$VB_PID" != "$OLD_VB_PID" ]; then
-        $ADB shell "kill -9 $VB_PID" 2>/dev/null
-        sleep 1
-    fi
 fi
 
 # 安装后重新绑定无障碍服务(install 过程可能解绑)
