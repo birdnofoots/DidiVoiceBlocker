@@ -67,6 +67,7 @@ class DashboardOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         DriverDataStore.init(this)
+        DriverPhotoStore.init(this)
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
 
