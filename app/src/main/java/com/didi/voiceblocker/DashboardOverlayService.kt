@@ -53,7 +53,10 @@ class DashboardOverlayService : Service() {
 
     private val displayReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            refreshDisplay()
+            when (intent?.action) {
+                "com.didi.voiceblocker.CLOSE_PANEL" -> minimizePanel()
+                else -> refreshDisplay()
+            }
         }
     }
 
@@ -72,7 +75,10 @@ class DashboardOverlayService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification())
 
         LocalBroadcastManager.getInstance(this).registerReceiver(
-            displayReceiver, IntentFilter(ACTION_REFRESH_DISPLAY)
+            displayReceiver, IntentFilter().apply {
+                addAction(ACTION_REFRESH_DISPLAY)
+                addAction("com.didi.voiceblocker.CLOSE_PANEL")
+            }
         )
 
         showOverlay()
@@ -368,13 +374,7 @@ class DashboardOverlayService : Service() {
     }
 
     private fun updatePhotoStatus() {
-        if (DriverPhotoStore.photoCompleted) {
-            tvPhotoStatus?.text = "📷"
-        } else if (DriverPhotoStore.photoCheckedToday) {
-            tvPhotoStatus?.text = "📵"
-        } else {
-            tvPhotoStatus?.text = ""
-        }
+        tvPhotoStatus?.text = if (DriverPhotoStore.photoCompleted) "✅ 今天拍过" else "❓ 今天拍照了吗?"
     }
 
     private fun createNotificationChannel() {

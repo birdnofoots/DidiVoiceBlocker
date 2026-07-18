@@ -241,5 +241,18 @@ class DashboardAccessibilityService : AccessibilityService() {
         }
     }
 
+    // 全部工具 + 出车拍照在 DIDI HybridActivity 的不同页
+    // 全部工具: performAction 已验证 OK
+    // 出车拍照: WebView 节点不暴露,用 bounds 坐标匹配 clickable 节点
+    private val COORD_ALL_TOOLS = intArrayOf(1094, 1067)
+    private val COORD_DRIVER_PHOTO = intArrayOf(463, 2037)
+
+
+
+
+    // 递归遍历整棵树,找 text/text 含 searchText 的节点
+
+
+    // 递归搜索: 找 bounds 中心包含 (x,y) 且 clickable 的节点
 }
 
