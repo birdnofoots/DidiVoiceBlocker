@@ -49,23 +49,29 @@ class DashboardAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        // 仅首页切换事件
-        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val et = event.eventType
+        // 两类事件都处理: Activity 切换 + 页内内容变更(如 tab 切换)
+        if (et != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            et != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) return
+
         // 防抖
         val now = System.currentTimeMillis()
         if (now - lastAutoReadTime < AUTO_READ_DEBOUNCE_MS) return
         lastAutoReadTime = now
 
-        // 检查是否在 DIDI 主页
-        if (!isOnDidiMainScreen()) return
+        // 延迟到下一帧读,避免主线程卡顿
+        mainHandler.post {
+            // 检查是否在 DIDI 主页
+            if (!isOnDidiMainScreen()) return@post
 
-        // 读订单数,仅变化时更新持久化
-        val count = readOrderCount()
-        if (count >= 0 && count != lastOrderCount) {
-            lastOrderCount = count
-            DriverDataStore.updateOrderCount(count)
-            Log.d(TAG, "Auto order update: $count")
-            ConfigManager.appendLog("DASH", "自动更新订单数=$count")
+            // 读订单数,仅变化时更新持久化
+            val count = readOrderCount()
+            if (count >= 0 && count != lastOrderCount) {
+                lastOrderCount = count
+                DriverDataStore.updateOrderCount(count)
+                Log.d(TAG, "Auto order update: $count")
+                ConfigManager.appendLog("DASH", "自动更新订单数=$count")
+            }
         }
     }
 
