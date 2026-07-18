@@ -196,5 +196,10 @@ if [ "$VB_ENABLED" = "true" ]; then
     echo "  验证: $CHECK"
 fi
 
+# 安装后重新绑定无障碍服务(install 过程可能解绑)
+echo "  重绑无障碍服务..."
+$ADB shell "settings put secure enabled_accessibility_services com.didi.voiceblocker/.DashboardAccessibilityService:com.didi.voiceblocker/.SmartVoiceBlocker" 2>/dev/null
+sleep 1
+
 echo ""
 ok "安装完成 - APK: $APK"
